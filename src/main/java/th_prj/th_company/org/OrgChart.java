@@ -14,7 +14,7 @@ import java.util.List;
 public record OrgChart(List<Dept> departments, Dept selected, List<Person> members, Long focusId) {
 
 	/** memberCount: 이 부서에 직접 소속된 인원 수 */
-	public record Dept(Long id, String name, int depth, long memberCount) {
+	public record Dept(Long id, String name, int depth, long memberCount, boolean enabled) {
 	}
 
 	/** photoUrl: 프로필 사진 주소 (없으면 null). 자택 주소 같은 개인정보는 넣지 않는다 */

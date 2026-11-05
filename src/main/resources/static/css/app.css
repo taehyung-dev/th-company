@@ -1202,3 +1202,14 @@ a.btn-primary, a.btn-secondary { display: inline-block; text-decoration: none; }
 
 /* 휴가 현황: 저장 버튼이 두 줄로 꺾이지 않게 */
 .grant-form .btn-link { white-space: nowrap; }
+
+/* 사람 목록을 조직도처럼 보여 주는 관리 화면 */
+.org-manage { grid-template-columns: 220px minmax(0, 1fr); margin-bottom: 20px; }
+.org-manage .org-members { min-width: 0; overflow-x: auto; }
+.org-manage .org-tree .tag { flex: none; font-size: 11px; }
+.org-name { white-space: nowrap; }
+.org-name small { margin-left: 4px; color: var(--muted); }
+.org-name small.duty { color: var(--primary); }
+@media (max-width: 900px) {
+	.org-manage { grid-template-columns: 1fr; }
+}

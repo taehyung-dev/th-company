@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+	사람 목록 화면의 좌측 부서 트리. 조직도, 사용자 관리, 전체 휴가 현황이 같이 쓴다.
+	href: 부서 링크의 주소. 뒤에 dept 값이 붙는다 (예: /admin/members?status=active)
+-->
+<section class="org-tree" th:fragment="deptTree(departments, selectedId, noDeptCount, href)">
+	<a th:each="d : ${departments}"
+	   th:href="@{${href}(dept=${d.id})}"
+	   th:classappend="${d.id == selectedId} ? 'active'"
+	   th:style="'padding-left:' + ${12 + d.depth * 16} + 'px'">
+		<span class="org-tree-name" th:text="${d.name}">개발본부</span>
+		<span class="tag tag-off" th:unless="${d.enabled}">사용 안 함</span>
+		<span class="org-tree-count" th:if="${d.memberCount > 0}" th:text="${d.memberCount}">0</span>
+	</a>
+	<a th:if="${noDeptCount > 0}" th:href="@{${href}(dept=${T(th_prj.th_company.org.DeptView).NO_DEPT})}"
+	   th:classappend="${selectedId == T(th_prj.th_company.org.DeptView).NO_DEPT} ? 'active'">
+		<span class="org-tree-name">부서 없음</span>
+		<span class="org-tree-count" th:text="${noDeptCount}">0</span>
+	</a>
+	<p class="empty org-empty" th:if="${#lists.isEmpty(departments) and noDeptCount == 0}">등록된 부서가 없습니다.</p>
+</section>
+</body>
+</html>

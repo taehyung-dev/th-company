@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -20,7 +21,7 @@ import th_prj.th_company.member.MemberRepository;
 public class OrgChartService {
 
 	/** 직책 → 직급 → 이름 순. 직책/직급이 없으면 뒤로. */
-	private static final Comparator<Member> MEMBER_ORDER = Comparator
+	public static final Comparator<Member> MEMBER_ORDER = Comparator
 		.comparingInt((Member m) -> m.getDuty() == null ? Integer.MAX_VALUE : m.getDuty().getSortOrder())
 		.thenComparingInt(m -> m.getGrade() == null ? Integer.MAX_VALUE : m.getGrade().getSortOrder())
 		.thenComparing(Member::getName);
@@ -61,7 +62,7 @@ public class OrgChartService {
 
 		List<OrgChart.Dept> depts = rows.stream()
 			.map(r -> new OrgChart.Dept(r.id(), r.name(), r.depth(),
-				membersByDept.getOrDefault(r.id(), List.of()).size()))
+				membersByDept.getOrDefault(r.id(), List.of()).size(), r.enabled()))
 			.toList();
 
 		if (depts.isEmpty()) {
@@ -79,6 +80,50 @@ public class OrgChartService {
 			.toList();
 
 		return new OrgChart(depts, selected, members, members.isEmpty() ? null : members.get(0).id());
+	}
+
+	/**
+	 * 사람 목록을 조직도처럼 나눈다. 관리 화면용이라 사용 안 함 부서도 보여 주어 아무도 빠지지 않게 한다.
+	 * 부서를 지정하지 않으면 본인 부서, 본인 부서가 비었으면 사람이 있는 첫 부서를 연다.
+	 *
+	 * @param rows   보여 줄 사람 전체. 이 순서를 유지한다
+	 * @param deptOf 그 사람의 부서 id (없으면 null)
+	 */
+	public <T> DeptView<T> deptView(List<T> rows, Function<T, Long> deptOf, Long departmentId, String loginId) {
+		Map<Long, List<T>> byDept = rows.stream().collect(Collectors.groupingBy(r -> {
+			Long id = deptOf.apply(r);
+			return id == null ? DeptView.NO_DEPT : id;
+		}));
+		List<OrgChart.Dept> depts = departmentService.tree().stream()
+			.map(r -> new OrgChart.Dept(r.id(), r.name(), r.depth(),
+				byDept.getOrDefault(r.id(), List.of()).size(), r.enabled()))
+			.toList();
+		long noDept = byDept.getOrDefault(DeptView.NO_DEPT, List.of()).size();
+
+		Long selected = selectDept(depts, noDept, departmentId, loginId);
+		String title = depts.stream().filter(d -> d.id().equals(selected)).map(OrgChart.Dept::name).findFirst()
+			.orElse(selected == null ? null : "부서 없음");
+		return new DeptView<>(depts, selected, title, noDept, byDept.getOrDefault(selected, List.of()));
+	}
+
+	private Long selectDept(List<OrgChart.Dept> depts, long noDept, Long requested, String loginId) {
+		if (requested != null) {
+			if (requested == DeptView.NO_DEPT && noDept > 0) {
+				return requested;
+			}
+			if (depts.stream().anyMatch(d -> d.id().equals(requested))) {
+				return requested;
+			}
+		}
+		Member me = memberRepository.findByLoginId(loginId).orElse(null);
+		if (me != null && me.getDepartment() != null) {
+			Long mine = me.getDepartment().getId();
+			if (depts.stream().anyMatch(d -> d.id().equals(mine) && d.memberCount() > 0)) {
+				return mine;
+			}
+		}
+		return depts.stream().filter(d -> d.memberCount() > 0).map(OrgChart.Dept::id).findFirst()
+			.orElseGet(() -> noDept > 0 ? Long.valueOf(DeptView.NO_DEPT) : depts.isEmpty() ? null : depts.get(0).id());
 	}
 
 	/** 사용 안 함 부서와 그 하위 부서를 뺀다. rows 는 트리 순서여야 한다. */
