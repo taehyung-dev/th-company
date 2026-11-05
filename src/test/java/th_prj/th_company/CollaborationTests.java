@@ -477,4 +477,65 @@ class CollaborationTests {
 		mvc.perform(post("/attendance/manage/holidays/fixed").session(manager).with(csrf()).param("year", "2041"))
 			.andExpect(redirectedUrl("/attendance/manage/holidays?year=2041"));
 	}
+
+	// ---------- 사람 목록을 조직도처럼 ----------
+
+	@Test
+	void memberAdminShowsSelectedDepartmentLikeOrgChart() throws Exception {
+		Department other = departmentRepository.save(new Department("다른팀" + suffix, null, 1));
+		Member outsider = member("outsider", other);
+		MockHttpSession admin = login("sysadmin", "a");
+
+		mvc.perform(get("/admin/members").session(admin).param("dept", dept.getId().toString()))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("org-tree")))
+			.andExpect(content().string(containsString(other.getName())))
+			.andExpect(content().string(containsString(drafter.getLoginId())))
+			.andExpect(content().string(not(containsString(outsider.getLoginId()))));
+
+		// 검색은 보던 부서와 상관없이 회사 전체에서 찾는다
+		mvc.perform(get("/admin/members").session(admin).param("dept", dept.getId().toString())
+				.param("q", outsider.getLoginId()))
+			.andExpect(content().string(containsString("검색 결과")))
+			.andExpect(content().string(containsString(outsider.getLoginId())))
+			.andExpect(content().string(not(containsString(drafter.getLoginId()))));
+
+		// 부서가 없는 사용자도 빠지지 않는다
+		mvc.perform(get("/admin/members").session(admin).param("dept", "0"))
+			.andExpect(content().string(containsString("부서 없음")))
+			.andExpect(content().string(containsString("sysadmin")));
+	}
+
+	@Test
+	void leaveManageShowsSelectedDepartmentAndStaysThereAfterSaving() throws Exception {
+		Department other = departmentRepository.save(new Department("다른팀" + suffix, null, 1));
+		Member outsider = member("outsider", other);
+		MockHttpSession admin = login("sysadmin", "a");
+
+		mvc.perform(get("/admin/attendance/leave").session(admin).param("dept", dept.getId().toString()))
+			.andExpect(status().isOk())
+			.andExpect(content().string(containsString("org-tree")))
+			.andExpect(content().string(containsString(drafter.getName())))
+			.andExpect(content().string(not(containsString(outsider.getName()))));
+
+		mvc.perform(post("/admin/attendance/leave/grant").session(admin).with(csrf())
+				.param("member", drafter.getId().toString()).param("year", "2042").param("days", "20")
+				.param("dept", dept.getId().toString()))
+			.andExpect(redirectedUrl("/admin/attendance/leave?year=2042&dept=" + dept.getId()));
+	}
+
+	@Test
+	void personInDisabledDepartmentStaysVisibleOnManageScreens() throws Exception {
+		Department closed = new Department("폐지팀" + suffix, null, 1);
+		closed.update(closed.getName(), null, 1, false);
+		departmentRepository.save(closed);
+		Member left = member("left", closed);
+		MockHttpSession admin = login("sysadmin", "a");
+
+		mvc.perform(get("/admin/members").session(admin).param("dept", closed.getId().toString()))
+			.andExpect(content().string(containsString("사용 안 함")))
+			.andExpect(content().string(containsString(left.getLoginId())));
+		mvc.perform(get("/admin/attendance/leave").session(admin).param("dept", closed.getId().toString()))
+			.andExpect(content().string(containsString(left.getName())));
+	}
 }
