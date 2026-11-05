@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title th:text="${title} + ' - 관리자'">관리자</title>
+	<link rel="stylesheet" th:href="@{/css/app.css}">
+	<link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+
+<header th:fragment="header" class="topbar admin-topbar">
+	<a class="brand" th:href="@{/}">TH Company <span class="brand-sub">관리자</span></a>
+	<div class="topbar-right">
+		<span class="user-name" th:title="${currentUser}"><strong th:text="${currentUserName}">홍길동</strong> 님</span>
+		<a class="icon-btn" th:href="@{/}" title="홈으로" aria-label="홈으로">
+			<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>
+		</a>
+		<form th:action="@{/logout}" method="post">
+			<button type="submit" class="icon-btn" title="로그아웃" aria-label="로그아웃">
+				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>
+			</button>
+		</form>
+	</div>
+</header>
+
+<!-- 관리자는 모든 메뉴, 관리 권한만 있는 사용자는 자기 기능 메뉴만 -->
+<nav th:fragment="sidebar" class="sidebar admin-sidebar">
+	<th:block th:if="${isAdmin}">
+		<div class="menu-group">인사정보</div>
+		<a th:href="@{/admin/members}" th:classappend="${menu == 'members'} ? 'active'">사용자 관리</a>
+		<a th:href="@{/admin/departments}" th:classappend="${menu == 'departments'} ? 'active'">부서 관리</a>
+		<a th:each="t : ${codeTypes}"
+		   th:href="@{/admin/codes/{p}(p=${t.path})}"
+		   th:classappend="${menu == 'codes-' + t.path} ? 'active'"
+		   th:text="${t.label} + ' 관리'">직급 관리</a>
+		<div class="menu-group">권한</div>
+		<a th:href="@{/admin/permissions}" th:classappend="${menu == 'permissions'} ? 'active'">권한 관리</a>
+	</th:block>
+	<th:block th:if="${isAdmin}">
+		<div class="menu-group">근태</div>
+		<a th:href="@{/attendance/manage/holidays}">공휴일 관리</a>
+		<a th:href="@{/attendance/manage/leave}">휴가 현황</a>
+	</th:block>
+	<th:block th:if="${can.board}">
+		<div class="menu-group">게시판</div>
+		<a th:href="@{/admin/boards}" th:classappend="${menu == 'boards'} ? 'active'">게시판 관리</a>
+	</th:block>
+	<th:block th:if="${can.approval}">
+		<div class="menu-group">전자결재</div>
+		<a th:href="@{/admin/approval-templates}" th:classappend="${menu == 'approval-templates'} ? 'active'">결재 양식 관리</a>
+	</th:block>
+	<th:block th:if="${can.room or can.resource}">
+		<div class="menu-group">예약</div>
+		<a th:if="${can.room}" th:href="@{/admin/rooms}" th:classappend="${menu == 'rooms'} ? 'active'">회의실 관리</a>
+		<a th:if="${can.resource}" th:href="@{/admin/resources}" th:classappend="${menu == 'resources'} ? 'active'">자원 관리</a>
+	</th:block>
+	<th:block th:if="${isAdmin}">
+		<div class="menu-group">화면</div>
+		<a th:href="@{/admin/menus}" th:classappend="${menu == 'menus'} ? 'active'">메뉴 순서</a>
+	</th:block>
+</nav>
+
+<th:block th:fragment="alerts">
+	<div class="alert alert-info" th:if="${message}" th:text="${message}">저장했습니다.</div>
+	<div class="alert alert-error" th:if="${error}" th:text="${error}">오류</div>
+</th:block>
+
+</body>
+</html>

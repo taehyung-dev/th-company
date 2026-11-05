@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('근태 정정')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar('attendance')}"></header>
+<div class="layout">
+	<main class="content">
+		<div class="board-layout">
+			<nav th:replace="~{attendance/fragments :: nav}"></nav>
+
+			<section class="board-main">
+				<div class="board-head">
+					<div>
+						<h2>근태 정정</h2>
+						<p class="board-desc">
+							<strong th:text="${memberLabel}">김도현 (개발1팀)</strong> ·
+							<span th:text="${#temporals.format(form.date, 'yyyy년 M월 d일 (E)')}">2026년 10월 28일 (수)</span>
+						</p>
+					</div>
+				</div>
+
+				<div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
+
+				<form class="board-panel post-form attend-edit" th:action="@{/attendance/manage/edit}" th:object="${form}" method="post">
+					<input type="hidden" th:field="*{memberId}">
+					<input type="hidden" th:field="*{date}">
+
+					<div class="attend-edit-times">
+						<div>
+							<label for="checkIn">출근</label>
+							<input type="time" th:field="*{checkIn}">
+						</div>
+						<div>
+							<label for="checkOut">퇴근</label>
+							<input type="time" th:field="*{checkOut}">
+						</div>
+					</div>
+					<p class="hint-inline attend-edit-hint">
+						출근을 비우면 그날 기록이 지워집니다. 퇴근이 출근보다 이르면 다음 날 새벽(06시 전) 퇴근으로 저장합니다.
+					</p>
+
+					<label for="note">정정 사유 <span class="req">*</span></label>
+					<input type="text" th:field="*{note}" maxlength="200" placeholder="예: 외근 후 직출, 퇴근 버튼 누락" required>
+					<p class="field-error" th:if="${#fields.hasErrors('note')}" th:errors="*{note}"></p>
+
+					<div class="form-buttons">
+						<a class="btn-secondary"
+						   th:href="@{/attendance/manage/members/{id}(id=${form.memberId},month=${#temporals.format(form.date, 'yyyy-MM')})}">취소</a>
+						<button type="submit" class="btn-primary">저장</button>
+					</div>
+				</form>
+			</section>
+		</div>
+	</main>
+</div>
+</body>
+</html>

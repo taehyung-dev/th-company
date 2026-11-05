@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "th-company",
+      "runtimeExecutable": "C:/workspace/th-company/gradlew.bat",
+      "runtimeArgs": ["-p", "C:/workspace/th-company", "bootRun"],
+      "port": 8080
+    }
+  ]
+}

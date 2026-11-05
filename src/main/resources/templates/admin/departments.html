@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('부서 관리')}"></head>
+<body>
+<header th:replace="~{admin/fragments :: header}"></header>
+<div class="layout">
+	<nav th:replace="~{admin/fragments :: sidebar}"></nav>
+
+	<main class="content">
+		<div class="content-head">
+			<h2>부서 관리</h2>
+		</div>
+		<th:block th:replace="~{admin/fragments :: alerts}"></th:block>
+
+		<div class="split">
+			<section class="panel">
+				<table class="table">
+					<thead>
+					<tr><th>부서명</th><th class="num">인원</th><th class="num">순서</th><th>상태</th><th></th></tr>
+					</thead>
+					<tbody>
+					<tr th:each="d : ${rows}" th:classappend="${!d.enabled} ? 'row-disabled'">
+						<td>
+							<span class="tree-indent" th:style="'padding-left:' + ${d.depth * 20} + 'px'">
+								<span class="tree-mark" th:if="${d.depth > 0}">└</span>
+								<span th:text="${d.name}">경영지원본부</span>
+							</span>
+						</td>
+						<td class="num" th:text="${d.memberCount}">0</td>
+						<td class="num" th:text="${d.sortOrder}">0</td>
+						<td><span class="tag" th:classappend="${d.enabled} ? 'tag-on' : 'tag-off'"
+						          th:text="${d.enabled} ? '사용' : '사용 안 함'">사용</span></td>
+						<td class="actions">
+							<a th:href="@{/admin/departments(edit=${d.id})}">수정</a>
+							<form th:action="@{/admin/departments/{id}/delete(id=${d.id})}" method="post"
+							      onsubmit="return confirm('이 부서를 삭제할까요?')">
+								<button type="submit" class="btn-link danger">삭제</button>
+							</form>
+						</td>
+					</tr>
+					<tr th:if="${#lists.isEmpty(rows)}">
+						<td colspan="5" class="empty">등록된 부서가 없습니다. 오른쪽에서 부서를 추가하세요.</td>
+					</tr>
+					</tbody>
+				</table>
+			</section>
+
+			<section class="panel">
+				<h3 th:text="${form.id == null} ? '부서 추가' : '부서 수정'">부서 추가</h3>
+				<form th:action="@{/admin/departments}" th:object="${form}" method="post" class="form">
+					<input type="hidden" th:field="*{id}">
+
+					<label for="name">부서명</label>
+					<input type="text" th:field="*{name}" maxlength="50" required>
+					<p class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></p>
+
+					<label for="parentId">상위 부서</label>
+					<select th:field="*{parentId}">
+						<option value="">(최상위)</option>
+						<option th:each="d : ${rows}" th:value="${d.id}"
+						        th:disabled="${d.id == form.id}"
+						        th:text="${#strings.repeat('　', d.depth) + d.name}">부서</option>
+					</select>
+
+					<label for="sortOrder">정렬 순서</label>
+					<input type="number" th:field="*{sortOrder}" min="0">
+					<p class="field-error" th:if="${#fields.hasErrors('sortOrder')}" th:errors="*{sortOrder}"></p>
+
+					<label class="check" th:if="${form.id != null}">
+						<input type="checkbox" th:field="*{enabled}"> 사용
+					</label>
+
+					<div class="form-buttons">
+						<a class="btn-secondary" th:if="${form.id != null}" th:href="@{/admin/departments}">취소</a>
+						<button type="submit" class="btn-primary">저장</button>
+					</div>
+				</form>
+			</section>
+		</div>
+	</main>
+</div>
+</body>
+</html>

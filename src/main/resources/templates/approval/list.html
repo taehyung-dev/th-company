@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${box.label})}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar('approval')}"></header>
+<div class="layout">
+	<main class="content">
+		<div class="board-layout">
+			<nav th:replace="~{approval/fragments :: nav}"></nav>
+
+			<section class="board-main">
+				<div class="board-head">
+					<div>
+						<h2 th:text="${box.label}">미결문서</h2>
+						<p class="board-desc" th:text="${box.description}">설명</p>
+					</div>
+				</div>
+
+				<div class="alert alert-info" th:if="${message}" th:text="${message}"></div>
+				<div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
+
+				<div class="board-panel">
+					<table class="post-table doc-table">
+						<thead>
+						<tr>
+							<th class="col-docno">문서번호</th>
+							<th class="col-form">양식</th>
+							<th>제목</th>
+							<th class="col-author">기안자</th>
+							<th class="col-when" th:text="${box.name() == 'COMPLETED'} ? '완료일' : (${box.name() == 'DRAFTS'} ? '저장일' : '기안일')">기안일</th>
+							<th class="col-status">상태</th>
+						</tr>
+						</thead>
+						<tbody>
+						<tr th:each="d : ${docs.content}">
+							<td class="col-docno" th:text="${d.docNo} ?: '-'">품의-2026-0001</td>
+							<td class="col-form" th:text="${d.templateName}">품의서</td>
+							<td class="col-title">
+								<a th:href="${box.name() == 'DRAFTS'} ? @{/approval/docs/{id}/edit(id=${d.id})} : @{/approval/docs/{id}(id=${d.id}, from=${box.path})}"
+								   th:text="${d.title}">제목</a>
+							</td>
+							<td class="col-author" th:text="${d.drafterName}">홍길동</td>
+							<td class="col-when" th:text="${d.displayDate()}">2026.10.23</td>
+							<td class="col-status">
+								<span th:replace="~{approval/fragments :: status(${d.status})}"></span>
+								<span class="current-approver" th:if="${d.currentApprover}" th:text="${d.currentApprover}">김팀장</span>
+							</td>
+						</tr>
+						</tbody>
+					</table>
+					<p th:if="${docs.empty}" class="empty post-empty">문서가 없습니다.</p>
+				</div>
+
+				<nav class="pagination" th:if="${docs.totalPages > 1}">
+					<a th:if="${docs.hasPrevious()}" th:href="@{/approval/box/{p}(p=${box.path}, page=${docs.number})}">‹</a>
+					<a th:each="n : ${#numbers.sequence(1, docs.totalPages)}" th:text="${n}"
+					   th:classappend="${n == docs.number + 1} ? 'current'"
+					   th:href="@{/approval/box/{p}(p=${box.path}, page=${n})}">1</a>
+					<a th:if="${docs.hasNext()}" th:href="@{/approval/box/{p}(p=${box.path}, page=${docs.number + 2})}">›</a>
+				</nav>
+			</section>
+		</div>
+	</main>
+</div>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${managing} ? ${monthView.memberName} + ' 근태' : '내 근태')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar('attendance')}"></header>
+<div class="layout">
+	<main class="content">
+		<div class="board-layout">
+			<nav th:replace="~{attendance/fragments :: nav}"></nav>
+
+			<section class="board-main">
+				<div class="board-head">
+					<div>
+						<h2 th:text="${managing} ? ${monthView.memberName} + ' 근태' : '내 근태'">내 근태</h2>
+						<p class="board-desc" th:if="${managing}" th:text="${monthView.deptName}">개발1팀</p>
+					</div>
+					<a class="btn-secondary" th:if="${managing}" th:href="@{/attendance/manage}">전체 현황으로</a>
+				</div>
+
+				<div class="alert alert-info" th:if="${message}" th:text="${message}"></div>
+
+				<!-- 오늘 출퇴근 (내 근태에서만) -->
+				<div class="board-panel attend-today" th:if="${today != null}">
+					<div class="attend">
+						<div><span class="label">근무일</span><span class="value value-sm" th:text="${today.displayWorkDate()}">10월 28일 (수)</span></div>
+						<div><span class="label">출근</span><span class="value" th:text="${today.displayCheckIn()}">--:--</span></div>
+						<div><span class="label">퇴근</span><span class="value" th:text="${today.displayCheckOut()}">--:--</span></div>
+						<div th:if="${today.displayWorked() != null}"><span class="label">근무</span><span class="value value-sm" th:text="${today.displayWorked()}">8시간</span></div>
+					</div>
+					<div class="attend-today-side">
+						<p class="attend-msg ok" th:if="${attendanceMessage}" th:text="${attendanceMessage}"></p>
+						<p class="attend-msg bad" th:if="${attendanceError}" th:text="${attendanceError}"></p>
+						<form th:action="@{/attendance/check-out}" method="post"
+						      th:attr="data-confirm=${today.checkedOut} ? '이미 퇴근했습니다. 지금 시각으로 퇴근 시간을 다시 기록할까요?' : '퇴근하시겠습니까?'"
+						      onsubmit="return confirm(this.dataset.confirm)">
+							<input type="hidden" name="back" value="attendance">
+							<button type="submit" class="btn-primary" th:disabled="${!today.checkedIn}"
+							        th:text="${today.checkedOut} ? '퇴근 다시 기록' : '퇴근'">퇴근</button>
+						</form>
+					</div>
+				</div>
+
+				<!-- 월 이동 + 요약 -->
+				<div class="month-nav">
+					<a class="btn-secondary" th:href="${managing} ? @{/attendance/manage/members/{id}(id=${monthView.memberId},month=${monthView.prev})} : @{/attendance(month=${monthView.prev})}">‹ 이전 달</a>
+					<strong th:text="${monthView.displayMonth()}">2026년 10월</strong>
+					<a class="btn-secondary" th:if="${monthView.next != null}"
+					   th:href="${managing} ? @{/attendance/manage/members/{id}(id=${monthView.memberId},month=${monthView.next})} : @{/attendance(month=${monthView.next})}">다음 달 ›</a>
+					<span class="btn-secondary is-disabled" th:if="${monthView.next == null}">다음 달 ›</span>
+				</div>
+
+				<div class="attend-summary">
+					<div><span>출근</span><strong th:text="${monthView.workedDays()} + '일'">0일</strong></div>
+					<div><span>지각</span><strong th:classappend="${monthView.lateCount() > 0} ? 'warn'" th:text="${monthView.lateCount()} + '회'">0회</strong></div>
+					<div><span>조퇴</span><strong th:classappend="${monthView.earlyCount() > 0} ? 'warn'" th:text="${monthView.earlyCount()} + '회'">0회</strong></div>
+					<div><span>결근</span><strong th:classappend="${monthView.absentCount() > 0} ? 'bad'" th:text="${monthView.absentCount()} + '일'">0일</strong></div>
+					<div><span>휴가</span><strong th:text="${monthView.leaveDays()} + '일'">0일</strong></div>
+					<div><span>퇴근 미기록</span><strong th:classappend="${monthView.noCheckoutCount() > 0} ? 'bad'" th:text="${monthView.noCheckoutCount()} + '일'">0일</strong></div>
+					<div><span>총 근무</span><strong th:text="${monthView.displayTotalWorked()}">0시간</strong></div>
+					<div><span>하루 평균</span><strong th:text="${monthView.displayAverageWorked()}">-</strong></div>
+				</div>
+
+				<div class="board-panel">
+					<table class="post-table attend-table">
+						<thead>
+						<tr>
+							<th class="col-date">날짜</th>
+							<th class="col-time">출근</th>
+							<th class="col-time">퇴근</th>
+							<th class="col-worked">근무시간</th>
+							<th class="col-state">상태</th>
+							<th class="col-act" th:if="${managing}"></th>
+						</tr>
+						</thead>
+						<tbody>
+						<!-- 그 달의 모든 날짜. 앞으로의 날짜(와 입사 전)는 흐리게 -->
+						<tr th:each="d : ${monthView.days}"
+						    th:classappend="${(d.offDay ? 'weekend ' : '') + (d.state.name() == 'NONE' ? 'upcoming' : '')}">
+							<td class="col-date" th:text="${d.displayDate()}">10.1 (수)</td>
+							<td class="col-time" th:classappend="${d.late and !d.offDay} ? 'warn'" th:text="${d.displayCheckIn()}">09:00</td>
+							<td class="col-time" th:classappend="${d.early and !d.offDay} ? 'warn'" th:text="${d.displayCheckOut()}">18:00</td>
+							<td class="col-worked" th:text="${d.displayWorked()}">9시간</td>
+							<td class="col-state"><th:block th:replace="~{attendance/fragments :: tags(${d})}"></th:block></td>
+							<td class="col-act" th:if="${managing}">
+								<a class="btn-link" th:href="@{/attendance/manage/edit(member=${monthView.memberId},date=${d.date})}">정정</a>
+							</td>
+						</tr>
+						</tbody>
+					</table>
+				</div>
+			</section>
+		</div>
+	</main>
+</div>
+</body>
+</html>

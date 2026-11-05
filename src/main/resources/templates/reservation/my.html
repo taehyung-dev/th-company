@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('내 ' + ${kind.label} + ' 예약')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar(${kind.menuKey})}"></header>
+<div class="layout">
+	<main class="content">
+		<div class="board-layout">
+			<nav th:replace="~{reservation/fragments :: nav}"></nav>
+
+			<section class="board-main">
+				<div class="board-head">
+					<h2 th:text="'내 ' + ${kind.label} + ' 예약'">내 회의실 예약</h2>
+					<a class="btn-primary" th:href="@{/reservations/{k}/new(k=${kind.path})}">예약하기</a>
+				</div>
+
+				<div class="alert alert-info" th:if="${message}" th:text="${message}"></div>
+				<div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
+
+				<h3 class="res-section">다가오는 예약 <span th:text="${upcoming.size()}">0</span></h3>
+				<div class="board-panel">
+					<table class="post-table res-table">
+						<thead>
+						<tr>
+							<th class="col-day">날짜</th>
+							<th class="col-period">시간</th>
+							<th class="col-res" th:text="${kind.label}">회의실</th>
+							<th class="col-title">사용 목적</th>
+							<th class="col-act"></th>
+						</tr>
+						</thead>
+						<tbody>
+						<tr th:each="r : ${upcoming}">
+							<td class="col-day" th:text="${r.shortDate()}">2026년 10월 28일 (수)</td>
+							<td class="col-period" th:text="${r.period()}">10:00 ~ 11:00</td>
+							<td class="col-res">
+								<th:block th:if="${kind.hasSubTypes()}"><th:block th:replace="~{reservation/fragments :: type(${r.resourceType})}"></th:block></th:block>
+								<span th:text="${r.resourceName}">대회의실</span>
+							</td>
+							<td class="col-title"><a th:href="@{/reservations/{id}(id=${r.id})}" th:text="${r.title}">주간 회의</a></td>
+							<td class="col-act">
+								<a class="btn-link" th:href="@{/reservations/{id}/edit(id=${r.id})}">수정</a>
+								<form th:action="@{/reservations/{id}/delete(id=${r.id})}" method="post"
+								      onsubmit="return confirm('이 예약을 취소할까요?')">
+									<input type="hidden" name="back" value="my">
+									<button type="submit" class="btn-link danger">취소</button>
+								</form>
+							</td>
+						</tr>
+						<tr th:if="${#lists.isEmpty(upcoming)}">
+							<td colspan="5" class="empty">다가오는 예약이 없습니다.</td>
+						</tr>
+						</tbody>
+					</table>
+				</div>
+
+				<h3 class="res-section">지난 예약 <small>최근 30일</small></h3>
+				<div class="board-panel">
+					<table class="post-table res-table">
+						<thead>
+						<tr>
+							<th class="col-day">날짜</th>
+							<th class="col-period">시간</th>
+							<th class="col-res" th:text="${kind.label}">회의실</th>
+							<th class="col-title">사용 목적</th>
+						</tr>
+						</thead>
+						<tbody>
+						<tr th:each="r : ${past}" class="upcoming">
+							<td class="col-day" th:text="${r.shortDate()}">2026년 10월 20일 (화)</td>
+							<td class="col-period" th:text="${r.period()}">10:00 ~ 11:00</td>
+							<td class="col-res">
+								<th:block th:if="${kind.hasSubTypes()}"><th:block th:replace="~{reservation/fragments :: type(${r.resourceType})}"></th:block></th:block>
+								<span th:text="${r.resourceName}">대회의실</span>
+							</td>
+							<td class="col-title"><a th:href="@{/reservations/{id}(id=${r.id})}" th:text="${r.title}">주간 회의</a></td>
+						</tr>
+						<tr th:if="${#lists.isEmpty(past)}">
+							<td colspan="4" class="empty">지난 예약이 없습니다.</td>
+						</tr>
+						</tbody>
+					</table>
+				</div>
+			</section>
+		</div>
+	</main>
+</div>
+</body>
+</html>

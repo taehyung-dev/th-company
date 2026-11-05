@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('전체 근태 현황')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar('attendance')}"></header>
+<div class="layout">
+	<main class="content">
+		<div class="board-layout">
+			<nav th:replace="~{attendance/fragments :: nav}"></nav>
+
+			<section class="board-main">
+				<div class="board-head">
+					<div>
+						<h2>전체 근태 현황</h2>
+						<p class="board-desc">부서가 지정된 재직자 기준입니다. 이름을 누르면 월별 근태를 보고 정정할 수 있습니다.</p>
+					</div>
+				</div>
+
+				<form class="address-search attend-filter" th:action="@{/attendance/manage}" method="get">
+					<a class="btn-secondary" th:href="@{/attendance/manage(date=${board.prev},dept=${dept})}" aria-label="전날" title="전날">‹</a>
+					<input type="date" name="date" th:value="${board.date}" onchange="this.form.submit()" aria-label="날짜">
+					<a class="btn-secondary" th:if="${board.next != null}" th:href="@{/attendance/manage(date=${board.next},dept=${dept})}"
+					   aria-label="다음 날" title="다음 날">›</a>
+					<select name="dept" aria-label="부서" onchange="this.form.submit()">
+						<option value="">전체 부서</option>
+						<option th:each="d : ${departments}" th:value="${d.id}" th:text="${d.indentedName()}"
+						        th:selected="${d.id == dept}">개발본부</option>
+					</select>
+					<span class="address-total" th:text="${board.displayDate()}">2026년 10월 28일 (수)</span>
+				</form>
+
+				<div class="attend-summary">
+					<div><span>대상</span><strong th:text="${#lists.size(board.rows)} + '명'">0명</strong></div>
+					<div><span>출근</span><strong th:text="${board.checkedIn()} + '명'">0명</strong></div>
+					<div><span>지각</span><strong th:classappend="${board.late() > 0} ? 'warn'" th:text="${board.late()} + '명'">0명</strong></div>
+					<div><span>미출근·결근</span><strong th:classappend="${board.missing() > 0} ? 'bad'" th:text="${board.missing()} + '명'">0명</strong></div>
+					<div><span>퇴근</span><strong th:text="${board.checkedOut()} + '명'">0명</strong></div>
+				</div>
+
+				<div class="board-panel">
+					<table class="post-table attend-table">
+						<thead>
+						<tr>
+							<th class="col-name">이름</th>
+							<th class="col-dept">부서</th>
+							<th class="col-time">출근</th>
+							<th class="col-time">퇴근</th>
+							<th class="col-worked">근무시간</th>
+							<th class="col-state">상태</th>
+							<th class="col-act"></th>
+						</tr>
+						</thead>
+						<tbody>
+						<tr th:each="r : ${board.rows}">
+							<td class="col-name">
+								<a th:href="@{/attendance/manage/members/{id}(id=${r.memberId},month=${#temporals.format(board.date, 'yyyy-MM')})}"
+								   th:text="${r.name}">김도현</a>
+								<span class="muted" th:text="${r.gradeName}">과장</span>
+							</td>
+							<td class="col-dept" th:text="${r.deptName}">개발1팀</td>
+							<td class="col-time" th:classappend="${r.day.late and !r.day.offDay} ? 'warn'" th:text="${r.day.displayCheckIn()}">09:00</td>
+							<td class="col-time" th:classappend="${r.day.early and !r.day.offDay} ? 'warn'" th:text="${r.day.displayCheckOut()}">18:00</td>
+							<td class="col-worked" th:text="${r.day.displayWorked()}">9시간</td>
+							<td class="col-state"><th:block th:replace="~{attendance/fragments :: tags(${r.day})}"></th:block></td>
+							<td class="col-act">
+								<a class="btn-link" th:href="@{/attendance/manage/edit(member=${r.memberId},date=${board.date})}">정정</a>
+							</td>
+						</tr>
+						<tr th:if="${#lists.isEmpty(board.rows)}">
+							<td colspan="7" class="empty">대상 직원이 없습니다.</td>
+						</tr>
+						</tbody>
+					</table>
+				</div>
+			</section>
+		</div>
+	</main>
+</div>
+</body>
+</html>

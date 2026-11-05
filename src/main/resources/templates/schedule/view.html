@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${item.title})}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar('schedule')}"></header>
+<div class="layout">
+	<main class="content">
+		<div class="narrow">
+			<article class="board-panel post">
+				<header class="post-head">
+					<span class="legend-item" th:classappend="'sch-' + ${item.type.css}">
+						<span class="legend-dot"></span>
+						<span th:text="${item.type.label} + (${item.departmentName != null} ? ' · ' + ${item.departmentName} : '')">부서일정</span>
+					</span>
+					<h2 th:text="${item.title}">주간 회의</h2>
+					<div class="post-meta">
+						<strong th:text="${item.displayPeriod()}">2026.10.23 (금) 09:00 ~ 10:00</strong>
+						<span class="sep">·</span>
+						<span th:text="'등록 ' + ${item.ownerName}">등록 홍길동</span>
+					</div>
+				</header>
+
+				<ul th:replace="~{fragments/files :: view(${files})}"></ul>
+
+				<div class="post-body" th:text="${item.description} ?: '내용 없음'">내용</div>
+
+				<footer class="post-actions">
+					<a class="btn-secondary" th:href="@{/schedule(ym=${#temporals.format(item.startAt, 'yyyy-MM')})}">달력</a>
+					<th:block th:if="${item.canEdit}">
+						<a class="btn-secondary" th:href="@{/schedule/{id}/edit(id=${item.id})}">수정</a>
+						<form th:action="@{/schedule/{id}/delete(id=${item.id})}" method="post"
+						      onsubmit="return confirm('이 일정을 삭제할까요?')">
+							<button type="submit" class="btn-secondary danger">삭제</button>
+						</form>
+					</th:block>
+				</footer>
+			</article>
+		</div>
+	</main>
+</div>
+</body>
+</html>

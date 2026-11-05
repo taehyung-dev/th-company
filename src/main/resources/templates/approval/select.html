@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('결재하기')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar('approval')}"></header>
+<div class="layout">
+	<main class="content">
+		<div class="board-layout">
+			<nav th:replace="~{approval/fragments :: nav}"></nav>
+
+			<section class="board-main">
+				<div class="board-head"><h2>결재 양식 선택</h2></div>
+				<div class="template-list">
+					<a class="board-panel template-card" th:each="t : ${templates}" th:href="@{/approval/new/{id}(id=${t.id})}">
+						<strong th:text="${t.name}">품의서</strong>
+						<span th:text="${t.description}">설명</span>
+					</a>
+					<p class="empty" th:if="${#lists.isEmpty(templates)}">사용 가능한 결재 양식이 없습니다.</p>
+				</div>
+			</section>
+		</div>
+	</main>
+</div>
+</body>
+</html>

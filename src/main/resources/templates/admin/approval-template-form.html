@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head(${form.id == null} ? '양식 만들기' : '양식 수정')}"></head>
+<body>
+<header th:replace="~{admin/fragments :: header}"></header>
+<div class="layout">
+	<nav th:replace="~{admin/fragments :: sidebar}"></nav>
+
+	<main class="content">
+		<div class="content-head">
+			<h2 th:text="${form.id == null} ? '양식 만들기' : '양식 수정'">양식 만들기</h2>
+			<a class="head-action" th:href="@{/admin/approval-templates}">목록으로</a>
+		</div>
+		<th:block th:replace="~{admin/fragments :: alerts}"></th:block>
+
+		<div class="tpl-layout">
+			<form id="tplForm" th:action="@{/admin/approval-templates}" th:object="${form}" method="post" class="panel form tpl-editor">
+				<input type="hidden" th:field="*{id}">
+
+				<h3>기본 정보</h3>
+				<div class="tpl-grid">
+					<div>
+						<label for="name">양식 이름 <span class="req">*</span></label>
+						<input type="text" th:field="*{name}" maxlength="50" placeholder="예: 휴가신청서" required>
+						<p class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></p>
+					</div>
+					<div>
+						<label for="code">문서번호 앞자리 <span class="req">*</span></label>
+						<input type="text" th:field="*{code}" maxlength="10" placeholder="예: 휴가" required
+						       th:readonly="${documentCount > 0}">
+						<p class="field-error" th:if="${#fields.hasErrors('code')}" th:errors="*{code}"></p>
+						<p class="hint tight" th:if="${documentCount > 0}" th:text="'작성된 문서 ' + ${documentCount} + '건이 있어 바꿀 수 없습니다.'"></p>
+						<p class="hint tight" th:unless="${documentCount > 0}">문서번호가 <code><span id="codeEx">휴가</span>-2026-0001</code> 형식이 됩니다.</p>
+					</div>
+					<div class="span-2">
+						<label for="description">설명</label>
+						<input type="text" th:field="*{description}" maxlength="200" placeholder="양식 선택 화면에 보이는 설명 (선택)">
+						<p class="field-error" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></p>
+					</div>
+					<div>
+						<label for="sortOrder">순서</label>
+						<input type="number" th:field="*{sortOrder}" min="0" max="9999">
+						<p class="field-error" th:if="${#fields.hasErrors('sortOrder')}" th:errors="*{sortOrder}"></p>
+					</div>
+					<div>
+						<label>상태</label>
+						<label class="check"><input type="checkbox" th:field="*{enabled}"> 사용 (해제하면 새 문서를 쓸 수 없음)</label>
+					</div>
+				</div>
+
+				<h3>입력 항목 <span class="hint-inline" th:text="'(최대 ' + ${maxFields} + '개, 기안할 때 본문 위에 이 순서대로 나옵니다)'"></span></h3>
+				<div class="tpl-field-head" aria-hidden="true">
+					<span>항목 이름</span><span>종류</span><span>필수</span><span></span>
+				</div>
+				<ol class="tpl-fields" id="fieldList" th:attr="data-max=${maxFields}">
+					<li class="tpl-field" th:each="f, st : *{fields}">
+						<div class="tpl-field-main">
+							<input type="text" th:name="|fields[${st.index}].label|" th:value="${f.label}" maxlength="50"
+							       placeholder="예: 휴가 종류" aria-label="항목 이름" data-k="label">
+							<select th:name="|fields[${st.index}].type|" aria-label="종류" data-k="type">
+								<option th:each="t : ${fieldTypes}" th:value="${t}" th:text="${t.label}"
+								        th:selected="${t == f.type}">한 줄 글</option>
+							</select>
+							<label class="tpl-req"><input type="checkbox" th:name="|fields[${st.index}].required|" value="true"
+							                              th:checked="${f.required}" data-k="required"> 필수</label>
+							<span class="tpl-move">
+								<button type="button" class="btn-link" data-act="up" title="위로" aria-label="위로">▲</button>
+								<button type="button" class="btn-link" data-act="down" title="아래로" aria-label="아래로">▼</button>
+								<button type="button" class="btn-link danger" data-act="remove" title="삭제" aria-label="삭제">✕</button>
+							</span>
+						</div>
+						<input type="text" class="tpl-options" th:name="|fields[${st.index}].options|" th:value="${f.options}"
+						       maxlength="500" placeholder="선택지를 쉼표로 구분 (예: 연차, 반차, 병가)" aria-label="선택지" data-k="options">
+					</li>
+				</ol>
+				<p class="hint tight" id="fieldEmpty">입력 항목이 없으면 본문만 쓰는 양식이 됩니다.</p>
+				<button type="button" class="btn-secondary" id="addField">+ 항목 추가</button>
+
+				<h3>본문 서식</h3>
+				<textarea th:field="*{contentTemplate}" rows="12" placeholder="새 문서를 쓸 때 본문에 미리 채워 넣을 내용 (선택)"></textarea>
+				<p class="field-error" th:if="${#fields.hasErrors('contentTemplate')}" th:errors="*{contentTemplate}"></p>
+
+				<div class="form-buttons">
+					<button type="submit" form="deleteForm" class="btn-secondary danger" th:if="${form.id != null and documentCount == 0}">삭제</button>
+					<span class="spacer"></span>
+					<a class="btn-secondary" th:href="@{/admin/approval-templates}">취소</a>
+					<button type="submit" class="btn-primary">저장</button>
+				</div>
+			</form>
+			<form id="deleteForm" th:if="${form.id != null}" th:action="@{/admin/approval-templates/{id}/delete(id=${form.id})}"
+			      method="post" onsubmit="return confirm('이 양식을 삭제할까요?')"></form>
+
+			<!-- 기안 화면에서 어떻게 보이는지 -->
+			<aside class="panel tpl-preview" aria-label="미리보기">
+				<h3>기안 화면 미리보기</h3>
+				<p class="tpl-pv-name" id="pvName">양식 이름</p>
+				<div class="tpl-pv-fields" id="pvFields"></div>
+				<label class="tpl-pv-label" id="pvContentLabel">내용</label>
+				<div class="tpl-pv-body" id="pvBody"></div>
+			</aside>
+		</div>
+
+		<!-- [항목 추가]로 복사하는 빈 줄 -->
+		<template id="fieldTemplate">
+			<li class="tpl-field">
+				<div class="tpl-field-main">
+					<input type="text" maxlength="50" placeholder="예: 휴가 종류" aria-label="항목 이름" data-k="label">
+					<select aria-label="종류" data-k="type">
+						<option th:each="t : ${fieldTypes}" th:value="${t}" th:text="${t.label}">한 줄 글</option>
+					</select>
+					<label class="tpl-req"><input type="checkbox" value="true" data-k="required"> 필수</label>
+					<span class="tpl-move">
+						<button type="button" class="btn-link" data-act="up" title="위로" aria-label="위로">▲</button>
+						<button type="button" class="btn-link" data-act="down" title="아래로" aria-label="아래로">▼</button>
+						<button type="button" class="btn-link danger" data-act="remove" title="삭제" aria-label="삭제">✕</button>
+					</span>
+				</div>
+				<input type="text" class="tpl-options" maxlength="500" placeholder="선택지를 쉼표로 구분 (예: 연차, 반차, 병가)"
+				       aria-label="선택지" data-k="options">
+			</li>
+		</template>
+	</main>
+</div>
+<script>
+	(function () {
+		var list = document.getElementById('fieldList');
+		var max = Number(list.dataset.max);
+		var addBtn = document.getElementById('addField');
+
+		// 줄 순서대로 name 을 fields[0].label ... 로 다시 매긴다
+		function renumber() {
+			list.querySelectorAll('.tpl-field').forEach(function (li, i) {
+				li.querySelectorAll('[data-k]').forEach(function (el) {
+					el.name = 'fields[' + i + '].' + el.dataset.k;
+				});
+				var isSelect = li.querySelector('[data-k="type"]').value === 'SELECT';
+				li.querySelector('.tpl-options').hidden = !isSelect;
+			});
+			var count = list.children.length;
+			document.getElementById('fieldEmpty').hidden = count > 0;
+			addBtn.disabled = count >= max;
+			preview();
+		}
+
+		addBtn.addEventListener('click', function () {
+			var li = document.getElementById('fieldTemplate').content.firstElementChild.cloneNode(true);
+			list.appendChild(li);
+			renumber();
+			li.querySelector('[data-k="label"]').focus();
+		});
+
+		list.addEventListener('click', function (e) {
+			var btn = e.target.closest('[data-act]');
+			if (!btn) return;
+			var li = btn.closest('.tpl-field');
+			if (btn.dataset.act === 'up' && li.previousElementSibling) list.insertBefore(li, li.previousElementSibling);
+			if (btn.dataset.act === 'down' && li.nextElementSibling) list.insertBefore(li.nextElementSibling, li);
+			if (btn.dataset.act === 'remove') li.remove();
+			renumber();
+		});
+		list.addEventListener('change', renumber);
+		document.getElementById('tplForm').addEventListener('input', preview);
+
+		// 미리보기: 기안 화면의 입력칸 모양을 흉내 낸다 (입력은 안 됨)
+		function preview() {
+			document.getElementById('pvName').textContent = document.getElementById('name').value.trim() || '양식 이름';
+			var code = document.getElementById('code').value.trim();
+			var codeEx = document.getElementById('codeEx');
+			if (codeEx) codeEx.textContent = code || '휴가';
+
+			var box = document.getElementById('pvFields');
+			box.replaceChildren();
+			list.querySelectorAll('.tpl-field').forEach(function (li) {
+				var label = li.querySelector('[data-k="label"]').value.trim();
+				if (!label) return;
+				var type = li.querySelector('[data-k="type"]').value;
+				var wrap = document.createElement('div');
+				wrap.className = 'tpl-pv-field' + (type === 'TEXTAREA' ? ' wide' : '');
+				var l = document.createElement('label');
+				l.textContent = label + (li.querySelector('[data-k="required"]').checked ? ' *' : '');
+				wrap.appendChild(l);
+				var input;
+				if (type === 'SELECT') {
+					input = document.createElement('select');
+					var opts = li.querySelector('[data-k="options"]').value.split(',')
+						.map(function (s) { return s.trim(); }).filter(Boolean);
+					['선택하세요'].concat(opts).forEach(function (o) {
+						var op = document.createElement('option');
+						op.textContent = o;
+						input.appendChild(op);
+					});
+				} else if (type === 'TEXTAREA') {
+					input = document.createElement('textarea');
+					input.rows = 2;
+				} else {
+					input = document.createElement('input');
+					input.type = type === 'DATE' ? 'date' : 'text';
+					input.placeholder = type === 'MONEY' ? '0 원' : type === 'NUMBER' ? '숫자' : '';
+				}
+				input.disabled = true;
+				wrap.appendChild(input);
+				box.appendChild(wrap);
+			});
+			document.getElementById('pvContentLabel').textContent = box.children.length ? '내용 (선택)' : '내용';
+			document.getElementById('pvBody').textContent = document.getElementById('contentTemplate').value || ' ';
+		}
+
+		renumber();
+	})();
+</script>
+</body>
+</html>

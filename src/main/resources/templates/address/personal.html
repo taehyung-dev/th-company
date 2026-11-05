@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${title})}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar('address')}"></header>
+<div class="layout">
+	<main class="content">
+		<div class="board-layout"
+		     th:with="here=@{/address/personal(q=${q}, g=${g}, fav=${fav ? true : null}, page=${contacts.number + 1})}">
+			<nav th:replace="~{address/fragments :: nav}"></nav>
+
+			<section class="board-main">
+				<div class="board-head">
+					<div>
+						<h2 th:text="${title}">개인 주소록</h2>
+						<p class="board-desc">나만 보는 연락처입니다. 거래처나 협력사 담당자를 그룹으로 나눠 관리하세요.</p>
+					</div>
+					<div class="head-actions">
+						<a class="btn-secondary" th:href="@{/address/personal/export}">CSV 내보내기</a>
+						<a class="btn-primary" th:href="@{/address/personal/new(g=${g})}">연락처 추가</a>
+					</div>
+				</div>
+
+				<div class="alert alert-info" th:if="${message}" th:text="${message}"></div>
+				<div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
+
+				<form class="address-search" th:action="@{/address/personal}" method="get">
+					<input type="hidden" name="g" th:value="${g}" th:if="${g != null}">
+					<input type="hidden" name="fav" value="true" th:if="${fav}">
+					<input type="search" name="q" th:value="${q}" placeholder="이름, 회사, 부서, 이메일, 전화번호">
+					<button type="submit" class="btn-secondary">검색</button>
+					<span class="address-total" th:text="'총 ' + ${contacts.totalElements} + '건'">총 0건</span>
+				</form>
+
+				<div class="board-panel">
+					<table class="post-table address-table">
+						<thead>
+						<tr>
+							<th class="col-star"></th>
+							<th class="col-name">이름</th>
+							<th class="col-aff">회사 · 부서 · 직위</th>
+							<th class="col-phone">휴대폰</th>
+							<th class="col-email">이메일</th>
+							<th class="col-group">그룹</th>
+							<th class="col-act"></th>
+						</tr>
+						</thead>
+						<tbody>
+						<tr th:each="c : ${contacts.content}">
+							<td class="col-star">
+								<form th:action="@{/address/personal/{id}/favorite(id=${c.id})}" method="post">
+									<input type="hidden" name="back" th:value="${here}">
+									<button type="submit" class="star" th:classappend="${c.favorite} ? 'on'"
+									        th:title="${c.favorite} ? '즐겨찾기 해제' : '즐겨찾기'" th:text="${c.favorite} ? '★' : '☆'">☆</button>
+								</form>
+							</td>
+							<td class="col-name">
+								<a th:href="@{/address/personal/{id}/edit(id=${c.id})}" th:text="${c.name}">홍길동</a>
+							</td>
+							<td class="col-aff" th:text="${#strings.isEmpty(c.affiliation())} ? '-' : ${c.affiliation()}">(주)가나 · 영업팀 · 과장</td>
+							<td class="col-phone">
+								<a th:if="${c.mobile}" th:href="'tel:' + ${c.mobile}" th:text="${c.mobile}">010</a>
+								<a th:if="${c.mobile == null and c.phone != null}" th:href="'tel:' + ${c.phone}" th:text="${c.phone}">02</a>
+								<span th:if="${c.mobile == null and c.phone == null}">-</span>
+							</td>
+							<td class="col-email">
+								<a th:if="${c.email}" th:href="'mailto:' + ${c.email}" th:text="${c.email}">mail</a>
+								<span th:unless="${c.email}">-</span>
+							</td>
+							<td class="col-group" th:text="${c.groupName} ?: '-'">거래처</td>
+							<td class="col-act">
+								<a th:href="@{/address/personal/{id}/edit(id=${c.id})}">수정</a>
+								<form th:action="@{/address/personal/{id}/delete(id=${c.id})}" method="post"
+								      th:attr="data-confirm=${c.name} + ' 연락처를 삭제할까요?'"
+								      onsubmit="return confirm(this.dataset.confirm)">
+									<input type="hidden" name="back" th:value="${here}">
+									<button type="submit" class="btn-link danger">삭제</button>
+								</form>
+							</td>
+						</tr>
+						</tbody>
+					</table>
+					<p th:if="${contacts.empty}" class="empty post-empty"
+					   th:text="${#strings.isEmpty(q)} ? '등록된 연락처가 없습니다. [연락처 추가]나 사내 주소록의 [+ 내 주소록]으로 추가하세요.' : '검색 결과가 없습니다.'">없음</p>
+				</div>
+
+				<nav class="pagination" th:if="${contacts.totalPages > 1}">
+					<a th:if="${contacts.hasPrevious()}" th:href="@{/address/personal(q=${q}, g=${g}, fav=${fav ? true : null}, page=${contacts.number})}">‹</a>
+					<a th:each="n : ${#numbers.sequence(1, contacts.totalPages)}" th:text="${n}"
+					   th:classappend="${n == contacts.number + 1} ? 'current'"
+					   th:href="@{/address/personal(q=${q}, g=${g}, fav=${fav ? true : null}, page=${n})}">1</a>
+					<a th:if="${contacts.hasNext()}" th:href="@{/address/personal(q=${q}, g=${g}, fav=${fav ? true : null}, page=${contacts.number + 2})}">›</a>
+				</nav>
+			</section>
+		</div>
+	</main>
+</div>
+</body>
+</html>

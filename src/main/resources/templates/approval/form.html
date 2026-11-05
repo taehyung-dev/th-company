@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${template.name} + ' 작성')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar('approval')}"></header>
+<div class="layout">
+	<main class="content">
+		<div class="board-layout">
+			<nav th:replace="~{approval/fragments :: nav}"></nav>
+
+			<section class="board-main">
+				<div class="a4-page">
+				<div class="board-head">
+					<div>
+						<h2 th:text="${template.name}">품의서</h2>
+						<p class="board-desc" th:text="${form.id == null} ? '새 문서 작성' : '보관함 문서 수정'">새 문서 작성</p>
+					</div>
+				</div>
+
+				<div class="alert alert-info" th:if="${message}" th:text="${message}"></div>
+				<div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
+
+				<form id="draftForm" class="post-form doc-write" th:action="@{/approval/drafts}" th:object="${form}" method="post" enctype="multipart/form-data">
+					<input type="hidden" th:field="*{id}">
+					<input type="hidden" th:field="*{templateId}">
+
+					<div class="doc a4-sheet">
+					<div class="doc-top">
+						<h2 class="doc-form-name" th:text="${template.name}">품의서</h2>
+						<div class="stamp-area">
+							<table th:replace="~{approval/fragments :: draftStamp('approverStamp')}"></table>
+							<!-- 결재 순서대로 담아 두는 곳. 화면에는 결재란으로 보인다 -->
+							<ol id="approverList" hidden>
+								<li th:each="a : ${selectedApprovers}"
+								    th:attr="data-id=${a.id},data-name=${a.name},data-grade=${a.grade},data-label=${a.label}">
+									<input type="hidden" name="approverIds" th:value="${a.id}">
+									<span class="line-name" th:text="${a.label}">홍길동</span>
+								</li>
+							</ol>
+							<div class="stamp-tools">
+								<span class="hint-inline" id="approverEmpty">결재자를 지정하세요.</span>
+								<button type="button" class="btn-secondary" data-picker data-list="approverList" data-empty="approverEmpty"
+								        data-input="approverIds" th:attr="data-max=${maxApprovers}" data-title="결재선 지정" data-ordered="true"
+								        data-stamp="approverStamp">결재선 지정</button>
+							</div>
+						</div>
+					</div>
+
+					<table class="doc-info">
+						<tr>
+							<th>문서번호</th><td>(상신 시 부여)</td>
+							<th>상태</th><td><span class="doc-status">작성중</span></td>
+						</tr>
+						<tr>
+							<th>기안자</th>
+							<td>
+								<span th:text="${drafter.name}">홍길동</span>
+								<span class="muted" th:if="${drafter.grade}" th:text="${drafter.grade}">대리</span>
+							</td>
+							<th>기안부서</th><td th:text="${drafter.dept} ?: '-'">개발1팀</td>
+						</tr>
+						<tr>
+							<th><label for="title">제목</label></th>
+							<td colspan="3">
+								<input type="text" th:field="*{title}" maxlength="200">
+								<p class="field-error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
+							</td>
+						</tr>
+						<tr>
+							<th>참조</th>
+							<td colspan="3">
+								<div class="cc-row">
+									<ul id="ccList" class="cc-inline">
+										<li th:each="a : ${selectedCc}"
+										    th:attr="data-id=${a.id},data-name=${a.name},data-grade=${a.grade},data-label=${a.label}">
+											<input type="hidden" name="ccIds" th:value="${a.id}">
+											<span class="line-name" th:text="${a.label}">홍길동</span>
+										</li>
+									</ul>
+									<span class="hint-inline" id="ccEmpty">참조자가 없습니다.</span>
+									<button type="button" class="btn-secondary" data-picker data-list="ccList" data-empty="ccEmpty"
+									        data-input="ccIds" th:attr="data-max=${maxCc}" data-title="참조자 지정" data-ordered="false">참조자 지정</button>
+								</div>
+							</td>
+						</tr>
+					</table>
+
+					<!-- 양식 입력 항목 (관리자 > 결재 양식 관리에서 정한 순서) -->
+					<div class="doc-fields" th:unless="${#lists.isEmpty(template.fields)}">
+						<div class="doc-field" th:each="f, st : ${template.fields}"
+						     th:classappend="${f.type.name() == 'TEXTAREA'} ? 'wide'"
+						     th:with="v=${st.index < #lists.size(form.fieldValues)} ? ${form.fieldValues[st.index]} : ''">
+							<label th:for="'field' + ${st.index}">
+								<span th:text="${f.label}">항목</span> <span class="req" th:if="${f.required}">*</span>
+							</label>
+							<th:block th:switch="${f.type.name()}">
+								<textarea th:case="'TEXTAREA'" th:id="'field' + ${st.index}" th:name="'fieldValues[' + ${st.index} + ']'"
+								          rows="4" maxlength="2000" th:text="${v}" th:attr="data-label=${f.label}"></textarea>
+								<input th:case="'DATE'" type="date" th:id="'field' + ${st.index}" th:name="'fieldValues[' + ${st.index} + ']'"
+								       th:value="${v}" th:attr="data-label=${f.label}">
+								<input th:case="'NUMBER'" type="text" inputmode="decimal" th:id="'field' + ${st.index}"
+								       th:name="'fieldValues[' + ${st.index} + ']'" th:value="${v}" th:attr="data-label=${f.label}">
+								<div th:case="'MONEY'" class="money-input">
+									<input type="text" inputmode="numeric" th:id="'field' + ${st.index}" data-money
+									       th:name="'fieldValues[' + ${st.index} + ']'" th:value="${v}" th:attr="data-label=${f.label},data-type='MONEY'">
+									<span>원</span>
+								</div>
+								<select th:case="'SELECT'" th:id="'field' + ${st.index}" th:name="'fieldValues[' + ${st.index} + ']'"
+								        th:attr="data-label=${f.label}">
+									<option value="">선택하세요</option>
+									<option th:each="o : ${f.optionList()}" th:value="${o}" th:text="${o}" th:selected="${o == v}">연차</option>
+								</select>
+								<input th:case="*" type="text" maxlength="2000" th:id="'field' + ${st.index}"
+								       th:name="'fieldValues[' + ${st.index} + ']'" th:value="${v}" th:attr="data-label=${f.label}">
+							</th:block>
+						</div>
+					</div>
+
+					<label for="content" th:text="${#lists.isEmpty(template.fields)} ? '내용' : '내용 (선택)'">내용</label>
+					<textarea th:field="*{content}" rows="18"></textarea>
+					<p class="field-error" th:if="${#fields.hasErrors('content')}" th:errors="*{content}"></p>
+
+					<th:block th:replace="~{fragments/files :: edit(${files}, ${form.deleteFileIds})}"></th:block>
+					</div>
+
+					<div class="form-buttons">
+						<button type="submit" form="deleteForm" class="btn-secondary danger" th:if="${form.id != null}">삭제</button>
+						<span class="spacer"></span>
+						<a class="btn-secondary" th:href="${form.id == null} ? @{/approval} : @{/approval/box/drafts}">취소</a>
+						<button type="button" class="btn-secondary" id="previewButton">미리보기</button>
+						<button type="submit" name="action" value="save" class="btn-secondary">임시저장</button>
+						<button type="submit" name="action" value="submit" class="btn-primary"
+						        onclick="return confirm('결재를 상신할까요?')">상신</button>
+					</div>
+				</form>
+				<form id="deleteForm" th:if="${form.id != null}" th:action="@{/approval/docs/{id}/delete(id=${form.id})}"
+				      method="post" onsubmit="return confirm('이 문서를 삭제할까요?')"></form>
+
+				<dialog th:replace="~{approval/fragments :: picker}"></dialog>
+
+				<!-- 미리보기: 상신 후 문서 화면과 같은 모양. 값은 스크립트가 채운다 -->
+				<dialog id="previewDialog" class="preview-dialog doc-preview">
+					<div class="preview-bar">
+						<strong>미리보기</strong>
+						<span class="hint-inline">상신하면 문서번호와 기안일이 정해집니다.</span>
+						<button type="button" class="btn-secondary" data-close>닫기</button>
+					</div>
+					<article class="doc a4-sheet">
+						<div class="doc-top">
+							<h2 class="doc-form-name" th:text="${template.name}">품의서</h2>
+							<table th:replace="~{approval/fragments :: draftStamp('pvStamp')}"></table>
+						</div>
+						<table class="doc-info">
+							<tr>
+								<th>문서번호</th><td>(상신 시 부여)</td>
+								<th>상태</th><td><span class="doc-status">작성중</span></td>
+							</tr>
+							<tr>
+								<th>기안자</th>
+								<td>
+									<span th:text="${drafter.name}">홍길동</span>
+									<span class="muted" th:if="${drafter.grade}" th:text="${drafter.grade}">대리</span>
+								</td>
+								<th>기안부서</th><td th:text="${drafter.dept} ?: '-'">개발1팀</td>
+							</tr>
+							<tr>
+								<th>기안일</th><td id="pvDate">-</td>
+								<th>완료일</th><td>-</td>
+							</tr>
+							<tr>
+								<th>제목</th><td colspan="3" class="doc-title" id="pvTitle">제목</td>
+							</tr>
+							<tr id="pvCcRow" hidden>
+								<th>참조</th><td colspan="3" id="pvCc"></td>
+							</tr>
+						</table>
+						<table class="doc-info doc-field-table" id="pvFields" hidden></table>
+						<div class="post-body doc-body" id="pvBody"></div>
+					</article>
+				</dialog>
+				</div>
+			</section>
+		</div>
+	</main>
+</div>
+<script th:src="@{/js/line-picker.js}"></script>
+<script>
+	// 미리보기: 지금 입력한 제목/본문/결재선으로 문서 모양을 보여준다 (textContent 만 사용)
+	(function () {
+		var dialog = document.getElementById('previewDialog');
+
+		function cell(tag, cls, text) {
+			var el = document.createElement(tag);
+			el.className = cls;
+			if (text) el.textContent = text;
+			return el;
+		}
+
+		document.getElementById('previewButton').addEventListener('click', function () {
+			renderLineStamp(document.getElementById('pvStamp'), document.getElementById('approverList'));
+
+			var cc = Array.prototype.map.call(document.querySelectorAll('#ccList li'), function (li) { return li.dataset.label; });
+			document.getElementById('pvCc').textContent = cc.join(', ');
+			document.getElementById('pvCcRow').hidden = !cc.length;
+
+			var now = new Date();
+			var pad = function (n) { return String(n).padStart(2, '0'); };
+			document.getElementById('pvDate').textContent =
+				now.getFullYear() + '.' + pad(now.getMonth() + 1) + '.' + pad(now.getDate()) + ' (상신 시)';
+			document.getElementById('pvTitle').textContent = document.getElementById('title').value.trim() || '(제목 없음)';
+			document.getElementById('pvBody').textContent = document.getElementById('content').value;
+			var pvFields = document.getElementById('pvFields');
+			pvFields.replaceChildren();
+			document.querySelectorAll('.doc-field [data-label]').forEach(function (el) {
+				var tr = document.createElement('tr');
+				tr.appendChild(cell('th', '', el.dataset.label));
+				var v = el.value.trim();
+				if (v && el.dataset.type === 'MONEY') v = v + '원';
+				var td = cell('td', 'doc-field-value', v || '-');
+				tr.appendChild(td);
+				pvFields.appendChild(tr);
+			});
+			pvFields.hidden = !pvFields.children.length;
+
+			dialog.showModal();
+		});
+
+		dialog.querySelector('[data-close]').addEventListener('click', function () { dialog.close(); });
+		// 바깥(배경) 클릭 시 닫기
+		dialog.addEventListener('click', function (e) {
+			if (e.target === dialog) dialog.close();
+		});
+	})();
+
+	// 금액 항목: 입력하는 동안 천 단위 쉼표 (저장할 때 서버에서 쉼표를 뺀다)
+	document.querySelectorAll('[data-money]').forEach(function (input) {
+		function format() {
+			var digits = input.value.replace(/[^\d]/g, '').replace(/^0+(?=\d)/, '');
+			input.value = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+		}
+		input.addEventListener('input', format);
+		format();
+	});
+</script>
+</body>
+</html>

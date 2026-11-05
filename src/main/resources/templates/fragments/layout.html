@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title th:text="${title} + ' - TH Company'">TH Company</title>
+	<link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+
+<!-- 상단 바(로고, 사용자) + 그 아래 메뉴 바. active 는 MainMenu.key (home / board / approval ...). 순서는 관리자 > 메뉴 순서 -->
+<div th:fragment="topbar(active)" class="site-header">
+	<header class="topbar">
+		<a class="brand" th:href="@{/}">TH Company</a>
+		<div class="topbar-right">
+			<span class="user-name" th:title="${currentUser}"><strong th:text="${currentUserName}">홍길동</strong> 님</span>
+			<!-- 알림: 누르면 최근 알림을 패널로 보여 준다. 스크립트가 없으면 링크대로 알림 화면으로 간다 -->
+			<div class="noti" data-noti th:attr="data-url=@{/notifications/recent}">
+				<a th:href="@{/notifications}" class="icon-btn" th:classappend="${active == 'notifications'} ? 'active'" title="알림" aria-label="알림" aria-expanded="false">
+					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 8 2.5 8h-17S6 15 6 9"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/></svg>
+					<span class="noti-badge" th:if="${unreadNotifications > 0}" th:text="${unreadNotifications > 99} ? '99+' : ${unreadNotifications}">3</span>
+				</a>
+				<div class="noti-panel" hidden></div>
+			</div>
+			<a th:href="@{/my}" class="icon-btn" th:classappend="${active == 'my'} ? 'active'" title="마이페이지" aria-label="마이페이지">
+				<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>
+			</a>
+			<!-- 조직도는 별도 창(팝업)으로 연다. 팝업이 막히면 링크대로 이 창에서 연다 -->
+			<a th:href="@{/org}" class="icon-btn" target="orgchart" data-org-popup title="조직도" aria-label="조직도">
+				<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="5" rx="1"/><rect x="3" y="16" width="6" height="5" rx="1"/><rect x="15" y="16" width="6" height="5" rx="1"/><path d="M12 8v4M6 16v-4h12v4"/></svg>
+			</a>
+			<a th:href="@{/admin}" th:if="${can.adminArea}" class="icon-btn" title="관리자 페이지" aria-label="관리자 페이지">
+				<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+			</a>
+			<form th:action="@{/logout}" method="post">
+				<button type="submit" class="icon-btn" title="로그아웃" aria-label="로그아웃">
+					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>
+				</button>
+			</form>
+		</div>
+		<script>
+			document.querySelector('[data-org-popup]').addEventListener('click', function (e) {
+				var w = Math.min(1080, screen.availWidth - 40), h = Math.min(760, screen.availHeight - 80);
+				var win = window.open(this.href, 'orgchart', 'width=' + w + ',height=' + h
+					+ ',left=' + Math.round((screen.availWidth - w) / 2) + ',top=' + Math.round((screen.availHeight - h) / 2)
+					+ ',resizable=yes,scrollbars=yes');
+				if (win) { e.preventDefault(); win.focus(); }
+			});
+
+			// 알림 패널: 열 때마다 최근 알림을 다시 불러온다
+			(function () {
+				var box = document.querySelector('[data-noti]');
+				var link = box.querySelector('a');
+				var panel = box.querySelector('.noti-panel');
+				function close() {
+					panel.hidden = true;
+					link.setAttribute('aria-expanded', 'false');
+				}
+				link.addEventListener('click', function (e) {
+					e.preventDefault();
+					if (!panel.hidden) { close(); return; }
+					fetch(box.dataset.url, { credentials: 'same-origin' })
+						.then(function (r) {
+							if (!r.ok || r.redirected) throw new Error('load failed');
+							return r.text();
+						})
+						.then(function (html) {
+							var doc = new DOMParser().parseFromString(html, 'text/html');
+							panel.replaceChildren.apply(panel, Array.prototype.slice.call(doc.body.children));
+							panel.hidden = false;
+							link.setAttribute('aria-expanded', 'true');
+						})
+						.catch(function () { location.href = link.href; });
+				});
+				document.addEventListener('click', function (e) { if (!box.contains(e.target)) close(); });
+				document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+			})();
+		</script>
+	</header>
+	<nav class="menubar">
+		<a th:each="m : ${mainMenus}" th:href="${m.path != null} ? @{${m.path}} : '#'"
+		   th:classappend="${active == m.key} ? 'active'" th:text="${m.label}">홈</a>
+	</nav>
+</div>
+
+</body>
+</html>

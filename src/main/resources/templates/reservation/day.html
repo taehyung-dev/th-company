@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${kind.label} + ' 예약')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar(${kind.menuKey})}"></header>
+<div class="layout">
+	<main class="content">
+		<div class="board-layout">
+			<nav th:replace="~{reservation/fragments :: nav}"></nav>
+
+			<section class="board-main">
+				<div class="board-head">
+					<div>
+						<h2 th:text="${kind.label} + ' 예약 현황'">회의실 예약 현황</h2>
+						<p class="board-desc">빈 시간을 누르면 그 시간으로 예약 화면이 열립니다.</p>
+					</div>
+					<a class="btn-primary" th:href="@{/reservations/{k}/new(k=${kind.path},date=${board.date})}">예약하기</a>
+				</div>
+
+				<div class="alert alert-info" th:if="${message}" th:text="${message}"></div>
+				<div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
+
+				<!-- 날짜 이동 -->
+				<div class="month-nav res-date-nav">
+					<a class="btn-secondary" th:href="@{/reservations/{k}(k=${kind.path},date=${board.prev()},type=${board.type})}">‹ 이전 날</a>
+					<strong th:text="${board.displayDate()}" th:classappend="${board.weekend()} ? 'weekend'">2026년 10월 28일 (수)</strong>
+					<a class="btn-secondary" th:href="@{/reservations/{k}(k=${kind.path},date=${board.next()},type=${board.type})}">다음 날 ›</a>
+					<a class="btn-secondary" th:unless="${board.today}" th:href="@{/reservations/{k}(k=${kind.path},type=${board.type})}">오늘</a>
+					<form th:action="@{/reservations/{k}(k=${kind.path})}" method="get" class="res-date-pick">
+						<input type="date" name="date" th:value="${board.date}" onchange="this.form.submit()" aria-label="날짜 선택">
+						<input type="hidden" name="type" th:if="${board.type != null}" th:value="${board.type}">
+					</form>
+				</div>
+
+				<!-- 종류 (자원 예약만: 비품·장비 / 차량) -->
+				<div class="res-tabs" th:if="${kind.hasSubTypes()}">
+					<a th:href="@{/reservations/{k}(k=${kind.path},date=${board.date})}" th:classappend="${board.type == null} ? 'active'">전체</a>
+					<a th:each="t : ${kind.types}" th:href="@{/reservations/{k}(k=${kind.path},date=${board.date},type=${t})}"
+					   th:classappend="${board.type == t} ? 'active'" th:text="${t.label}">비품·장비</a>
+				</div>
+
+				<div class="board-panel res-board" th:style="'--hours:' + ${board.hours.size()}">
+					<div class="res-row res-head">
+						<div class="res-name" th:text="${kind.label}">회의실</div>
+						<div class="res-track">
+							<span th:each="h : ${board.hours}" th:text="${h}">9</span>
+						</div>
+					</div>
+					<div class="res-row" th:each="r : ${board.rows}" th:classappend="${!r.enabled} ? 'res-off'">
+						<div class="res-name">
+							<strong th:text="${r.name}">대회의실</strong>
+							<span class="res-sub">
+								<th:block th:if="${kind.hasSubTypes()}"><th:block th:replace="~{reservation/fragments :: type(${r.type})}"></th:block></th:block>
+								<span th:if="${r.location}" th:text="${r.location}">본관 3층</span>
+								<span th:if="${r.capacity}" th:text="${r.capacity} + '인'">12인</span>
+								<span th:unless="${r.enabled}">사용 안 함</span>
+							</span>
+						</div>
+						<div class="res-track"
+						     th:data-resource="${r.enabled ? r.resourceId : null}"
+						     th:title="${r.enabled} ? '빈 시간을 누르면 예약' : null">
+							<a th:each="b : ${r.blocks}" class="res-block" th:classappend="${b.mine} ? 'mine'"
+							   th:href="@{/reservations/{id}(id=${b.id})}" th:style="${b.style()}"
+							   th:title="${b.time} + ' ' + ${b.title} + ' (' + ${b.ownerName} + (${b.ownerDept} != null ? ', ' + ${b.ownerDept} : '') + ')'">
+								<strong th:text="${b.title}">주간 회의</strong>
+								<span th:text="${b.time} + ' · ' + ${b.ownerName}">10:00 ~ 11:00 · 홍길동</span>
+							</a>
+							<div class="res-now" th:if="${board.nowPct != null}"
+							     th:style="'left:' + ${#numbers.formatDecimal(board.nowPct, 1, 3, 'POINT')} + '%'"></div>
+						</div>
+					</div>
+					<p class="empty res-empty" th:if="${#lists.isEmpty(board.rows)}">
+						<th:block th:text="'등록된 ' + ${kind.label} + '이(가) 없습니다.'">등록된 회의실이(가) 없습니다.</th:block>
+						<th:block th:if="${canManage}"><a th:href="@{/admin/{k}(k=${kind.path})}" th:text="${kind.label} + ' 관리'">회의실 관리</a>에서 추가하세요.</th:block>
+					</p>
+				</div>
+				<p class="res-count" th:text="'이 날 예약 ' + ${board.reservationCount()} + '건'">이 날 예약 0건</p>
+			</section>
+		</div>
+	</main>
+</div>
+<script th:inline="javascript">
+	// 빈 시간을 누르면 30분 단위로 맞춰 예약 화면으로
+	(function () {
+		var base = /*[[@{/reservations/{k}/new(k=${kind.path})}]]*/ '/reservations/rooms/new';
+		var date = /*[[${board.date}]]*/ '2026-10-28';
+		var startHour = /*[[${board.startHour}]]*/ 7;
+		var endHour = /*[[${board.endHour}]]*/ 21;
+		document.querySelectorAll('.res-track[data-resource]').forEach(function (track) {
+			track.addEventListener('click', function (e) {
+				if (e.target.closest('.res-block')) return;
+				var rect = track.getBoundingClientRect();
+				var ratio = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 0.999);
+				var minutes = Math.floor((startHour * 60 + ratio * (endHour - startHour) * 60) / 30) * 30;
+				if (minutes > 23 * 60) minutes = 23 * 60;
+				var hh = ('0' + Math.floor(minutes / 60)).slice(-2);
+				var mm = ('0' + (minutes % 60)).slice(-2);
+				location.href = base + '?resource=' + track.dataset.resource + '&date=' + date + '&start=' + hh + ':' + mm;
+			});
+		});
+	})();
+</script>
+</body>
+</html>

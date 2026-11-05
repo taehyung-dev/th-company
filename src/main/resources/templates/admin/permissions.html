@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('권한 관리')}"></head>
+<body>
+<header th:replace="~{admin/fragments :: header}"></header>
+<div class="layout">
+	<nav th:replace="~{admin/fragments :: sidebar}"></nav>
+
+	<main class="content">
+		<div class="content-head">
+			<h2>권한 관리</h2>
+			<span class="today">부서나 사용자를 체크해 권한을 줍니다. 바꾼 권한은 해당 사용자가 다시 로그인할 때부터 적용됩니다.</span>
+		</div>
+		<th:block th:replace="~{admin/fragments :: alerts}"></th:block>
+
+		<div class="perm-layout"
+		     th:with="perm=${selected.permission}, holderIds=${selected.holders.![memberId]}, deptIds=${selected.departments.![deptId]}">
+
+			<!-- 좌측: 권한 목록 -->
+			<section class="panel perm-col">
+				<div class="perm-col-head"><strong>권한</strong></div>
+				<ul class="perm-list">
+					<li th:each="g : ${groups}">
+						<a th:href="@{/admin/permissions(p=${g.permission.path})}"
+						   th:classappend="${g.permission == perm} ? 'active'">
+							<span th:text="${g.permission.label}">게시판관리자</span>
+							<span class="perm-count" th:text="${g.size()}">0</span>
+						</a>
+					</li>
+				</ul>
+				<p class="hint perm-desc" th:text="${perm.description}">설명</p>
+			</section>
+
+			<!-- 가운데: 조직도 (부서/사용자 체크) -->
+			<section class="panel perm-col">
+				<div class="perm-col-head">
+					<strong>조직도</strong>
+					<input type="search" id="orgSearch" placeholder="부서·이름 검색">
+				</div>
+				<ul class="org-pick perm-org" id="orgPick">
+					<th:block th:each="d : ${orgTree}">
+						<li class="pick-dept" th:attr="data-depth=${d.depth},data-name=${d.deptName}"
+						    th:classappend="${#lists.contains(deptIds, d.deptId)} ? 'picked'"
+						    th:style="'padding-left:' + ${4 + d.depth * 16} + 'px'">
+							<button type="button" class="pick-toggle" aria-label="펼치기/접기">▾</button>
+							<label class="pick-label">
+								<input type="checkbox" name="deptIds" form="grantForm" th:value="${d.deptId}"
+								       th:disabled="${#lists.contains(deptIds, d.deptId)}">
+								<span class="pick-name" th:text="${d.deptName}">개발본부</span>
+							</label>
+						</li>
+						<li class="pick-member" th:each="m : ${d.members}"
+						    th:classappend="${#lists.contains(holderIds, m.memberId)} ? 'picked'"
+						    th:attr="data-depth=${d.depth + 1},data-name=${m.name}"
+						    th:style="'padding-left:' + ${26 + d.depth * 16} + 'px'">
+							<label class="pick-label">
+								<input type="checkbox" name="memberIds" form="grantForm" th:value="${m.memberId}"
+								       th:disabled="${#lists.contains(holderIds, m.memberId)}">
+								<span class="pick-name" th:text="${m.name}">홍길동</span>
+								<span class="pick-grade" th:text="${m.gradeName}">과장</span>
+							</label>
+						</li>
+					</th:block>
+				</ul>
+				<p class="hint perm-org-foot">✓ 표시는 이미 대상입니다. 부서를 체크하면 그 부서 자체가 대상이 되어, 나중에 들어온 사람도 권한을 갖습니다.</p>
+			</section>
+
+			<!-- 추가 -->
+			<form class="perm-arrow" id="grantForm" th:action="@{/admin/permissions/{p}/grant(p=${perm.path})}" method="post">
+				<label class="check perm-sub">
+					<input type="checkbox" name="includeSub" value="true"> 하위 부서 포함
+				</label>
+				<button type="submit" class="btn-primary" id="grantButton">추가 ▶</button>
+				<span class="hint-inline" id="checkedCount">0개 선택</span>
+			</form>
+
+			<!-- 우측: 권한 대상 -->
+			<section class="panel perm-col">
+				<div class="perm-col-head">
+					<strong th:text="${perm.label} + ' 대상'">게시판관리자 대상</strong>
+					<span class="hint-inline" th:text="'부서 ' + ${#lists.size(selected.departments)} + ' · 사용자 ' + ${#lists.size(selected.holders)}">부서 0 · 사용자 0</span>
+				</div>
+				<div class="perm-targets">
+					<h4>부서</h4>
+					<ul class="perm-holders">
+						<li th:each="d : ${selected.departments}" th:classappend="${!d.enabled} ? 'row-disabled'">
+							<div>
+								<strong th:text="${d.deptName}">총무팀</strong>
+								<span class="tag tag-off" th:unless="${d.enabled}">사용 안 함 부서</span>
+							</div>
+							<div class="perm-actions">
+								<form th:action="@{/admin/permissions/{p}/dept-sub(p=${perm.path})}" method="post">
+									<input type="hidden" name="deptId" th:value="${d.deptId}">
+									<input type="hidden" name="includeSub" th:value="${!d.includeSub}">
+									<button type="submit" class="sub-toggle" th:classappend="${d.includeSub} ? 'on'"
+									        th:title="${d.includeSub} ? '누르면 하위 부서를 제외합니다' : '누르면 하위 부서를 포함합니다'">
+										<span th:text="${d.includeSub} ? '☑' : '☐'">☐</span> 하위 부서 포함
+									</button>
+								</form>
+								<form th:action="@{/admin/permissions/{p}/revoke-dept(p=${perm.path})}" method="post"
+								      th:attr="data-confirm=${d.deptName} + ' 부서의 ' + ${perm.label} + ' 권한을 해제할까요?'"
+								      onsubmit="return confirm(this.dataset.confirm)">
+									<input type="hidden" name="deptId" th:value="${d.deptId}">
+									<button type="submit" class="btn-link danger">해제</button>
+								</form>
+							</div>
+						</li>
+						<li class="empty" th:if="${#lists.isEmpty(selected.departments)}">지정된 부서가 없습니다.</li>
+					</ul>
+
+					<h4>사용자</h4>
+					<ul class="perm-holders">
+						<li th:each="h : ${selected.holders}" th:classappend="${!h.enabled} ? 'row-disabled'">
+							<div>
+								<strong th:text="${h.name}">홍길동</strong>
+								<span class="muted" th:text="${h.gradeName}">과장</span>
+								<span class="muted" th:text="${h.deptName} ?: '부서 없음'">개발1팀</span>
+								<span class="tag tag-off" th:unless="${h.enabled}">사용 중지</span>
+							</div>
+							<form th:action="@{/admin/permissions/{p}/revoke(p=${perm.path})}" method="post"
+							      th:attr="data-confirm=${h.name} + '님의 ' + ${perm.label} + ' 권한을 해제할까요?'"
+							      onsubmit="return confirm(this.dataset.confirm)">
+								<input type="hidden" name="memberId" th:value="${h.memberId}">
+								<button type="submit" class="btn-link danger">해제</button>
+							</form>
+						</li>
+						<li class="empty" th:if="${#lists.isEmpty(selected.holders)}">지정된 사용자가 없습니다.</li>
+					</ul>
+				</div>
+			</section>
+		</div>
+	</main>
+</div>
+<script>
+	// 조직도: 부서 접기, 부서·이름 검색, 체크 수 표시
+	(function () {
+		var org = document.getElementById('orgPick');
+		var search = document.getElementById('orgSearch');
+		var form = document.getElementById('grantForm');
+		var count = document.getElementById('checkedCount');
+
+		function refresh() {
+			var q = search.value.trim();
+			var rows = org.children;
+			var collapsedDepth = Infinity;
+			for (var i = 0; i < rows.length; i++) {
+				var row = rows[i];
+				var depth = parseInt(row.dataset.depth, 10);
+				if (depth <= collapsedDepth) collapsedDepth = Infinity;
+				var folded = depth > collapsedDepth;
+				if (q) {
+					row.hidden = row.dataset.name.indexOf(q) < 0;
+				} else {
+					row.hidden = folded;
+					if (row.classList.contains('pick-dept') && row.classList.contains('collapsed')
+							&& collapsedDepth === Infinity) {
+						collapsedDepth = depth;
+					}
+				}
+			}
+			if (q) {
+				// 검색에 맞는 사람이 있으면 그 사람의 부서 줄도 보여준다
+				var lastDept = null;
+				for (var j = 0; j < rows.length; j++) {
+					if (rows[j].classList.contains('pick-dept')) { lastDept = rows[j]; continue; }
+					if (!rows[j].hidden && lastDept) lastDept.hidden = false;
+				}
+			}
+		}
+
+		function updateCount() {
+			var n = document.querySelectorAll('input[form="grantForm"]:checked').length;
+			count.textContent = n + '개 선택';
+		}
+
+		org.addEventListener('click', function (e) {
+			var toggle = e.target.closest('.pick-toggle');
+			if (!toggle) return;
+			var dept = toggle.closest('.pick-dept');
+			dept.classList.toggle('collapsed');
+			toggle.textContent = dept.classList.contains('collapsed') ? '▸' : '▾';
+			refresh();
+		});
+		org.addEventListener('change', updateCount);
+		search.addEventListener('input', refresh);
+
+		form.addEventListener('submit', function (e) {
+			if (!document.querySelector('input[form="grantForm"]:checked')) {
+				e.preventDefault();
+				alert('가운데 조직도에서 부서나 사용자를 체크하세요.');
+			}
+		});
+		updateCount();
+	})();
+</script>
+</body>
+</html>

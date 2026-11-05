@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- 주소록 좌측 메뉴: 사내 주소록 | 개인 주소록(전체, 즐겨찾기, 그룹) | 그룹 관리 -->
+<nav th:fragment="nav" class="board-tree approval-nav address-nav">
+	<a class="btn-primary approval-new" th:href="@{/address/personal/new}">연락처 추가</a>
+	<a th:href="@{/address/company}" th:classappend="${menu == 'company'} ? 'active'"><span>사내 주소록</span></a>
+
+	<div class="board-tree-folder">개인 주소록</div>
+	<a th:href="@{/address/personal}" th:classappend="${menu == 'personal'} ? 'active'">
+		<span>전체</span><span class="nav-count" th:text="${nav.total}">0</span>
+	</a>
+	<a th:href="@{/address/personal(fav=true)}" th:classappend="${menu == 'favorite'} ? 'active'">
+		<span>★ 즐겨찾기</span><span class="nav-count" th:text="${nav.favorites}">0</span>
+	</a>
+	<a th:each="gr : ${nav.groups}" th:href="@{/address/personal(g=${gr.id})}"
+	   th:classappend="${menu == 'group-' + gr.id} ? 'active'">
+		<span class="nav-group" th:text="${gr.name}">거래처</span><span class="nav-count" th:text="${gr.count}">0</span>
+	</a>
+	<a th:href="@{/address/groups}" th:classappend="${menu == 'groups'} ? 'active'" class="nav-manage">
+		<span>그룹 관리</span>
+	</a>
+</nav>
+
+</body>
+</html>

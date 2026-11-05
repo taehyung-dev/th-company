@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('조직도')}"></head>
+<body class="popup-body">
+<!-- 상단 바의 조직도 아이콘이 여는 팝업 창. 팝업이 막혀 일반 창으로 열리면 [닫기] 대신 [홈으로]를 보인다 -->
+<header class="popup-head">
+	<h2>조직도</h2>
+	<button type="button" class="btn-secondary" id="popupClose" hidden onclick="window.close()">닫기</button>
+	<a class="btn-secondary" id="popupHome" th:href="@{/}">홈으로</a>
+</header>
+<script>
+	if (window.opener) {
+		document.getElementById('popupClose').hidden = false;
+		document.getElementById('popupHome').hidden = true;
+	}
+</script>
+
+<div class="layout">
+
+	<main class="content">
+
+		<div class="org">
+			<!-- 좌측: 부서 트리 -->
+			<section class="org-tree">
+				<a th:each="d : ${org.departments}"
+				   th:href="@{/org(dept=${d.id})}"
+				   th:classappend="${org.selected != null and d.id == org.selected.id} ? 'active'"
+				   th:style="'padding-left:' + ${12 + d.depth * 16} + 'px'">
+					<span class="org-tree-name" th:text="${d.name}">개발본부</span>
+					<span class="org-tree-count" th:if="${d.memberCount > 0}" th:text="${d.memberCount}">0</span>
+				</a>
+				<p class="empty org-empty" th:if="${#lists.isEmpty(org.departments)}">등록된 부서가 없습니다.</p>
+			</section>
+
+			<!-- 우측: 선택 부서에 직접 소속된 인원 -->
+			<section class="org-members" th:if="${org.selected != null}">
+				<div class="org-members-head">
+					<h3 th:text="${org.selected.name}">개발1팀</h3>
+					<span class="today" th:text="${#lists.size(org.members)} + '명'">0명</span>
+				</div>
+
+				<!-- 상세정보: 처음에는 본인(이 부서에 있으면) 또는 목록 맨 위 사람, 목록에서 다른 사람을 누르면 바뀐다 -->
+				<article class="person-card" th:each="p : ${org.members}" th:attr="data-card=${p.id}" th:hidden="${p.id != org.focusId}">
+					<div class="person-photo">
+						<img th:if="${p.photoUrl}" th:src="@{${p.photoUrl}}" th:alt="${p.name} + ' 프로필 사진'">
+						<span th:unless="${p.photoUrl}" th:text="${p.initial()}">김</span>
+					</div>
+					<div class="person-card-main">
+						<div class="person-card-name">
+							<strong th:text="${p.name}">김도현</strong>
+							<span th:text="${p.gradeName}">과장</span>
+							<span class="duty" th:if="${p.dutyName}" th:text="${p.dutyName}">팀장</span>
+						</div>
+						<dl class="person-info">
+							<dt>부서</dt><dd th:text="${p.departmentName}">개발1팀</dd>
+							<dt>사번</dt><dd th:text="${p.employeeNo} ?: '-'">2018001</dd>
+							<dt>이메일</dt>
+							<dd><a th:if="${p.email}" th:href="'mailto:' + ${p.email}" th:text="${p.email}">mail</a><th:block th:unless="${p.email}">-</th:block></dd>
+							<dt>연락처</dt>
+							<dd><a th:if="${p.phone}" th:href="'tel:' + ${p.phone}" th:text="${p.phone}">010</a><th:block th:unless="${p.phone}">-</th:block></dd>
+							<dt>입사일</dt><dd th:text="${p.hireDate} ? ${#temporals.format(p.hireDate, 'yyyy.MM.dd')} : '-'">2018.03.02</dd>
+						</dl>
+					</div>
+				</article>
+
+				<ul class="person-list">
+					<li class="person" th:each="p : ${org.members}" th:attr="data-person=${p.id}"
+					    th:classappend="${p.id == org.focusId} ? 'selected'" tabindex="0" th:title="${p.name} + ' 상세정보 보기'">
+						<span class="avatar">
+							<img th:if="${p.photoUrl}" th:src="@{${p.photoUrl}}" alt="" loading="lazy">
+							<th:block th:unless="${p.photoUrl}" th:text="${p.initial()}">김</th:block>
+						</span>
+						<div class="person-main">
+							<div class="person-name">
+								<strong th:text="${p.name}">김도현</strong>
+								<span th:text="${p.gradeName}">과장</span>
+								<span class="duty" th:if="${p.dutyName}" th:text="${p.dutyName}">팀장</span>
+							</div>
+							<div class="person-sub">
+								<a th:if="${p.email}" th:href="'mailto:' + ${p.email}" th:text="${p.email}">mail</a>
+								<span th:if="${p.phone}" th:text="${p.phone}">010</span>
+							</div>
+						</div>
+						<span class="person-no" th:text="${p.employeeNo}">2018001</span>
+					</li>
+				</ul>
+
+				<p class="empty org-empty" th:if="${#lists.isEmpty(org.members)}">소속 인원이 없습니다.</p>
+			</section>
+		</div>
+	</main>
+</div>
+<script>
+	(function () {
+		function select(li) {
+			var id = li.dataset.person;
+			document.querySelectorAll('[data-card]').forEach(function (c) { c.hidden = c.dataset.card !== id; });
+			document.querySelectorAll('[data-person]').forEach(function (p) { p.classList.toggle('selected', p === li); });
+		}
+		document.querySelectorAll('[data-person]').forEach(function (li) {
+			li.addEventListener('click', function (e) {
+				if (!e.target.closest('a')) select(li);  // 메일 링크는 그대로 동작
+			});
+			li.addEventListener('keydown', function (e) {
+				if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(li); }
+			});
+		});
+	})();
+</script>
+</body>
+</html>

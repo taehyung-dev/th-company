@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('대결 설정')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar('approval')}"></header>
+<div class="layout">
+	<main class="content">
+		<div class="board-layout">
+			<nav th:replace="~{approval/fragments :: nav}"></nav>
+
+			<section class="board-main">
+				<div class="board-head">
+					<div>
+						<h2>대결 설정</h2>
+						<p class="board-desc">자리를 비우는 동안 내 차례의 문서를 대신 결재할 사람을 지정합니다. 대결자는 승인과 반려만 할 수 있고 전결은 할 수 없습니다.</p>
+					</div>
+				</div>
+
+				<div class="alert alert-info" th:if="${message}" th:text="${message}"></div>
+				<div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
+
+				<form class="board-panel post-form res-form" th:action="@{/approval/delegation}" th:object="${form}" method="post">
+					<label for="delegateId">대결자</label>
+					<select th:field="*{delegateId}" required>
+						<option value="">선택하세요</option>
+						<optgroup th:each="g : ${approverGroups}" th:if="${!#lists.isEmpty(g.members)}" th:label="${g.departmentName}">
+							<option th:each="o : ${g.members}" th:value="${o.id}" th:text="${o.label}">홍길동</option>
+						</optgroup>
+					</select>
+					<p class="field-error" th:if="${#fields.hasErrors('delegateId')}" th:errors="*{delegateId}"></p>
+
+					<div class="period">
+						<div>
+							<label for="startDate">시작일</label>
+							<input type="date" th:field="*{startDate}" required>
+						</div>
+						<div>
+							<label for="endDate">종료일</label>
+							<input type="date" th:field="*{endDate}" required>
+						</div>
+					</div>
+					<p class="field-error" th:if="${#fields.hasErrors('startDate')}" th:errors="*{startDate}"></p>
+					<p class="field-error" th:if="${#fields.hasErrors('endDate')}" th:errors="*{endDate}"></p>
+
+					<label for="reason">사유 <span class="hint-inline">(선택)</span></label>
+					<input type="text" th:field="*{reason}" maxlength="200" placeholder="예: 출장, 휴가">
+
+					<div class="form-buttons">
+						<button type="submit" class="btn-primary">지정</button>
+					</div>
+				</form>
+
+				<h3 class="res-section">내가 지정한 대결자</h3>
+				<div class="board-panel">
+					<table class="post-table">
+						<thead>
+						<tr><th class="col-type">대결자</th><th class="col-period">기간</th><th class="col-title">사유</th><th class="col-state">상태</th><th class="col-act"></th></tr>
+						</thead>
+						<tbody>
+						<tr th:each="d : ${mine}">
+							<td class="col-type" th:text="${d.personName}">홍길동</td>
+							<td class="col-period" th:text="${d.period()}">2026.11.05 ~ 2026.11.07</td>
+							<td class="col-title" th:text="${d.reason} ?: '-'">출장</td>
+							<td class="col-state">
+								<span class="tag tag-ok" th:if="${d.active}">적용 중</span>
+								<span class="tag tag-muted" th:if="${d.ended}">종료</span>
+								<span class="tag tag-info" th:if="${!d.active and !d.ended}">예정</span>
+							</td>
+							<td class="col-act">
+								<form th:unless="${d.ended}" th:action="@{/approval/delegation/{id}/delete(id=${d.id})}" method="post"
+								      onsubmit="return confirm('대결 지정을 해제할까요?')">
+									<button type="submit" class="btn-link danger">해제</button>
+								</form>
+							</td>
+						</tr>
+						<tr th:if="${#lists.isEmpty(mine)}"><td colspan="5" class="empty">지정한 대결자가 없습니다.</td></tr>
+						</tbody>
+					</table>
+				</div>
+
+				<h3 class="res-section">나에게 맡겨진 대결</h3>
+				<div class="board-panel">
+					<table class="post-table">
+						<thead>
+						<tr><th class="col-type">원 결재자</th><th class="col-period">기간</th><th class="col-title">사유</th><th class="col-state">상태</th></tr>
+						</thead>
+						<tbody>
+						<tr th:each="d : ${assigned}">
+							<td class="col-type" th:text="${d.personName}">홍길동</td>
+							<td class="col-period" th:text="${d.period()}">2026.11.05 ~ 2026.11.07</td>
+							<td class="col-title" th:text="${d.reason} ?: '-'">출장</td>
+							<td class="col-state">
+								<span class="tag tag-ok" th:if="${d.active}">적용 중</span>
+								<span class="tag tag-info" th:unless="${d.active}">예정</span>
+							</td>
+						</tr>
+						<tr th:if="${#lists.isEmpty(assigned)}"><td colspan="4" class="empty">맡겨진 대결이 없습니다.</td></tr>
+						</tbody>
+					</table>
+				</div>
+			</section>
+		</div>
+	</main>
+</div>
+</body>
+</html>

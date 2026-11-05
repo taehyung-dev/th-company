@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('게시판')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar('board')}"></header>
+<div class="layout">
+	<main class="content">
+		<div class="content-head"><h2>게시판</h2></div>
+		<section class="widget">
+			<p class="empty">아직 만들어진 게시판이 없습니다.
+				<th:block th:if="${can.board}">관리자 화면의 <a th:href="@{/admin/boards}">게시판 관리</a>에서 추가하세요.</th:block>
+			</p>
+		</section>
+	</main>
+</div>
+</body>
+</html>

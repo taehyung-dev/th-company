@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${postId == null} ? '글쓰기' : '글 수정')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar('board')}"></header>
+<div class="layout">
+
+	<main class="content">
+		<div class="board-layout">
+			<nav th:replace="~{board/fragments :: tree}"></nav>
+
+			<section class="board-main">
+				<div class="board-head">
+					<h2 th:text="${board.name} + (${postId == null} ? ' 글쓰기' : ' 글 수정')">글쓰기</h2>
+				</div>
+
+				<div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
+
+				<form class="board-panel post-form" th:object="${form}" method="post" enctype="multipart/form-data"
+				      th:action="${postId == null} ? @{/boards/{b}/posts(b=${board.id})} : @{/boards/{b}/posts/{p}(b=${board.id}, p=${postId})}">
+
+					<label for="title">제목</label>
+					<input type="text" th:field="*{title}" maxlength="200" required>
+					<p class="field-error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
+
+					<label class="check" th:if="${can.board}">
+						<input type="checkbox" th:field="*{pinned}"> 목록 상단에 공지로 고정
+					</label>
+
+					<label for="content">내용</label>
+					<textarea th:field="*{content}" rows="16" required></textarea>
+					<p class="field-error" th:if="${#fields.hasErrors('content')}" th:errors="*{content}"></p>
+
+					<label>첨부파일 <span class="hint-inline" th:text="'(최대 ' + ${maxFiles} + '개, 파일당 20MB)'"></span></label>
+					<ul class="post-files edit" th:unless="${#lists.isEmpty(files)}">
+						<li th:each="f : ${files}">
+							<label class="check">
+								<input type="checkbox" name="deleteAttachmentIds" th:value="${f.id}"
+								       th:checked="${#lists.contains(form.deleteAttachmentIds, f.id)}">
+								<span th:text="${f.name}">파일.pdf</span>
+								<span class="file-size" th:text="${f.displaySize()}">10 KB</span>
+								<span class="hint-inline">삭제</span>
+							</label>
+						</li>
+					</ul>
+					<input type="file" name="uploads" multiple>
+
+					<div class="form-buttons">
+						<a class="btn-secondary"
+						   th:href="${postId == null} ? @{/boards/{b}(b=${board.id})} : @{/boards/{b}/posts/{p}(b=${board.id}, p=${postId})}">취소</a>
+						<button type="submit" class="btn-primary">저장</button>
+					</div>
+				</form>
+			</section>
+		</div>
+	</main>
+</div>
+</body>
+</html>

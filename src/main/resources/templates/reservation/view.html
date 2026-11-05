@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${item.title})}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar(${kind.menuKey})}"></header>
+<div class="layout">
+	<main class="content">
+		<div class="narrow">
+			<div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
+
+			<article class="board-panel post">
+				<header class="post-head">
+					<span class="res-sub">
+						<th:block th:replace="~{reservation/fragments :: type(${item.resourceType})}"></th:block>
+						<strong th:text="${item.resourceName}">대회의실</strong>
+						<span th:if="${item.location}" th:text="${item.location}">본관 3층</span>
+						<span class="tag tag-muted" th:if="${item.ended}">지난 예약</span>
+						<span class="tag tag-info" th:if="${item.repeat}" th:text="${item.repeatLabel()}">매주 반복</span>
+					</span>
+					<h2 th:text="${item.title}">주간 회의</h2>
+					<div class="post-meta">
+						<strong th:text="${item.displayPeriod()}">2026년 10월 28일 (수) 10:00 ~ 11:00</strong>
+						<span class="sep">·</span>
+						<span th:text="'예약 ' + ${item.ownerName} + (${item.ownerDept} != null ? ' (' + ${item.ownerDept} + ')' : '')">예약 홍길동</span>
+					</div>
+				</header>
+
+				<ul th:replace="~{fragments/files :: view(${files})}"></ul>
+
+				<div class="post-body" th:text="${item.memo} ?: '메모 없음'">메모</div>
+
+				<footer class="post-actions">
+					<a class="btn-secondary" th:href="@{/reservations/{k}(k=${kind.path},date=${item.startAt.toLocalDate()})}" th:text="${kind.label} + ' 예약 현황'">예약 현황</a>
+					<th:block th:if="${item.editable}">
+						<a class="btn-secondary" th:href="@{/reservations/{id}/edit(id=${item.id})}">수정</a>
+						<form th:action="@{/reservations/{id}/delete(id=${item.id})}" method="post"
+						      onsubmit="return confirm('이 예약을 취소할까요?')">
+							<button type="submit" class="btn-secondary danger" th:text="${item.repeat != null} ? '이 날만 취소' : '예약 취소'">예약 취소</button>
+						</form>
+						<form th:if="${item.repeat}" th:action="@{/reservations/{id}/delete(id=${item.id})}" method="post"
+						      onsubmit="return confirm('이 날과 이후의 반복 예약을 모두 취소할까요?')">
+							<input type="hidden" name="scope" value="following">
+							<button type="submit" class="btn-secondary danger">이후 전체 취소</button>
+						</form>
+					</th:block>
+				</footer>
+			</article>
+		</div>
+	</main>
+</div>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+	주소 입력칸. th:object 가 AddressForm 인 form 안에서 쓴다. (2단 그리드면 두 칸을 차지)
+	[주소 검색] → 카카오(다음) 우편번호 서비스를 화면 위 창으로 띄우고, 고른 주소로 우편번호/도로명/지번을 채운다.
+	스크립트는 처음 누를 때 불러오므로 주소를 입력하지 않는 사람은 카카오 서버에 접속하지 않는다.
+-->
+<div th:fragment="fields" class="span-2 addr-field">
+	<label for="addressDetail">주소</label>
+	<div class="addr-row">
+		<input type="text" th:field="*{zipCode}" class="addr-zip" placeholder="우편번호" readonly tabindex="-1">
+		<button type="button" class="btn-secondary" data-addr-search>주소 검색</button>
+		<button type="button" class="btn-link" data-addr-clear>지우기</button>
+	</div>
+	<input type="text" th:field="*{roadAddress}" placeholder="도로명주소 ([주소 검색]으로 입력)" readonly tabindex="-1">
+	<div class="addr-jibun">
+		<span class="addr-tag">지번</span>
+		<input type="text" th:field="*{jibunAddress}" placeholder="지번주소" readonly tabindex="-1">
+	</div>
+	<input type="text" th:field="*{addressDetail}" maxlength="200" placeholder="상세주소 (동·호수 등)">
+	<p class="field-error" th:if="${#fields.hasErrors('zipCode')}" th:errors="*{zipCode}"></p>
+	<p class="field-error" th:if="${#fields.hasErrors('addressDetail')}" th:errors="*{addressDetail}"></p>
+
+	<dialog class="preview-dialog addr-dialog" id="addrDialog" aria-label="주소 검색">
+		<div class="preview-bar">
+			<strong>주소 검색</strong>
+			<span class="hint-inline">도로명, 건물명, 지번으로 검색하세요. (예: 판교역로 235, 분당 주공, 삼평동 681)</span>
+			<button type="button" class="btn-secondary" data-close>닫기</button>
+		</div>
+		<div class="addr-embed" id="addrEmbed"></div>
+		<p class="addr-error" id="addrError" hidden>주소 검색 서비스를 불러오지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도하세요.</p>
+	</dialog>
+
+	<script>
+		(function () {
+			var SDK = 'https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
+			var dialog = document.getElementById('addrDialog');
+			var embed = document.getElementById('addrEmbed');
+			var error = document.getElementById('addrError');
+			var zip = document.getElementById('zipCode');
+			var road = document.getElementById('roadAddress');
+			var jibun = document.getElementById('jibunAddress');
+			var detail = document.getElementById('addressDetail');
+			var loading = null;
+
+			function loadSdk() {
+				if (window.daum && window.daum.Postcode) return Promise.resolve();
+				if (!loading) {
+					loading = new Promise(function (resolve, reject) {
+						var s = document.createElement('script');
+						s.src = SDK;
+						s.onload = resolve;
+						s.onerror = function () { loading = null; reject(); };
+						document.head.appendChild(s);
+					});
+				}
+				return loading;
+			}
+
+			// 카카오 안내대로 도로명주소 뒤에 (법정동, 공동주택 건물명) 참고항목을 붙인다
+			function roadWithExtra(data) {
+				var base = data.roadAddress || data.autoRoadAddress;
+				if (!base) return '';
+				var extra = [];
+				if (data.bname && /[동|로|가]$/g.test(data.bname)) extra.push(data.bname);
+				if (data.buildingName && data.apartment === 'Y') extra.push(data.buildingName);
+				return extra.length ? base + ' (' + extra.join(', ') + ')' : base;
+			}
+
+			function open() {
+				error.hidden = true;
+				embed.innerHTML = '';
+				dialog.showModal();
+				loadSdk().then(function () {
+					new daum.Postcode({
+						width: '100%',
+						height: '100%',
+						oncomplete: function (data) {
+							zip.value = data.zonecode;
+							road.value = roadWithExtra(data);
+							jibun.value = data.jibunAddress || data.autoJibunAddress || '';
+							dialog.close();
+							detail.focus();
+						}
+					}).embed(embed, { autoClose: false });
+				}).catch(function () {
+					error.hidden = false;
+				});
+			}
+
+			document.querySelector('[data-addr-search]').addEventListener('click', open);
+			document.querySelector('[data-addr-clear]').addEventListener('click', function () {
+				zip.value = road.value = jibun.value = detail.value = '';
+			});
+			dialog.querySelector('[data-close]').addEventListener('click', function () { dialog.close(); });
+			// 우편번호/도로명 칸을 눌러도 검색 창을 연다
+			[zip, road, jibun].forEach(function (el) { el.addEventListener('click', open); });
+		})();
+	</script>
+</div>
+
+</body>
+</html>

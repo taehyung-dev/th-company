@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head(${form.new} ? '사용자 등록' : '사용자 수정')}"></head>
+<body>
+<header th:replace="~{admin/fragments :: header}"></header>
+<div class="layout">
+	<nav th:replace="~{admin/fragments :: sidebar}"></nav>
+
+	<main class="content">
+		<div class="content-head">
+			<h2 th:text="${form.new} ? '사용자 등록' : '사용자 수정'">사용자 등록</h2>
+			<a class="head-action" th:href="@{/admin/members}">목록으로</a>
+		</div>
+		<th:block th:replace="~{admin/fragments :: alerts}"></th:block>
+
+		<form th:action="${form.new} ? @{/admin/members} : @{/admin/members/{id}(id=${form.id})}"
+		      th:object="${form}" method="post" enctype="multipart/form-data" class="panel form form-grid">
+
+			<h3 class="span-2">계정</h3>
+
+			<div>
+				<label for="loginId">아이디</label>
+				<div class="check-row">
+					<input type="text" th:field="*{loginId}" th:readonly="${!form.new}" maxlength="50" required>
+					<button type="button" class="btn-secondary" th:if="${form.new}" data-check="loginId">중복확인</button>
+				</div>
+				<p class="field-error" th:if="${#fields.hasErrors('loginId')}" th:errors="*{loginId}"></p>
+				<p class="check-result" data-result="loginId"></p>
+			</div>
+			<div>
+				<label for="password" th:text="${form.new} ? '초기 비밀번호' : '비밀번호 변경'">초기 비밀번호</label>
+				<input type="password" th:field="*{password}" autocomplete="new-password" maxlength="100"
+				       th:required="${form.new}" th:placeholder="${form.new} ? '' : '변경할 때만 입력'">
+				<p class="field-error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></p>
+			</div>
+			<div>
+				<label for="role">권한</label>
+				<select th:field="*{role}">
+					<option th:each="r : ${roles}" th:value="${r}" th:text="${r.name() == 'ADMIN'} ? '관리자' : '일반'">일반</option>
+				</select>
+			</div>
+			<div>
+				<label>상태</label>
+				<label class="check"><input type="checkbox" th:field="*{enabled}"> 사용 (해제하면 로그인 불가)</label>
+			</div>
+
+			<h3 class="span-2">인사정보</h3>
+
+			<div class="span-2 photo-field">
+				<div class="photo-preview" id="photoPreview">
+					<img th:if="${photoUrl}" th:src="@{${photoUrl}}" alt="프로필 사진">
+					<span th:unless="${photoUrl}" th:text="${#strings.isEmpty(form.name)} ? '?' : ${#strings.substring(form.name, 0, 1)}">김</span>
+				</div>
+				<div class="photo-controls">
+					<label for="photo">프로필 사진</label>
+					<input type="file" id="photo" name="photo" accept="image/jpeg,image/png,image/gif,image/bmp">
+					<label class="check" th:if="${photoUrl}">
+						<input type="checkbox" name="removePhoto" value="true" id="removePhoto"> 사진 삭제
+					</label>
+					<p class="hint">JPG, PNG, GIF, BMP · 5MB 이하. 가운데를 기준으로 정사각형으로 잘라 저장합니다.</p>
+				</div>
+			</div>
+
+			<div>
+				<label for="name">이름</label>
+				<input type="text" th:field="*{name}" maxlength="50" required>
+				<p class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></p>
+			</div>
+			<div>
+				<label for="employeeNo">사번</label>
+				<div class="check-row">
+					<input type="text" th:field="*{employeeNo}" maxlength="30">
+					<button type="button" class="btn-secondary" data-check="employeeNo">중복확인</button>
+				</div>
+				<p class="field-error" th:if="${#fields.hasErrors('employeeNo')}" th:errors="*{employeeNo}"></p>
+				<p class="check-result" data-result="employeeNo"></p>
+			</div>
+			<div>
+				<label for="departmentId">부서</label>
+				<select th:field="*{departmentId}">
+					<option value="">(없음)</option>
+					<option th:each="d : ${departments}" th:value="${d.id}"
+					        th:text="${#strings.repeat('　', d.depth) + d.name + (d.enabled ? '' : ' (사용 안 함)')}">부서</option>
+				</select>
+			</div>
+			<div>
+				<label for="hireDate">입사일</label>
+				<input type="date" th:field="*{hireDate}">
+			</div>
+			<div>
+				<label for="gradeId">직급</label>
+				<select th:field="*{gradeId}">
+					<option value="">(없음)</option>
+					<option th:each="g : ${grades}" th:value="${g.id}" th:text="${g.name}">사원</option>
+				</select>
+			</div>
+			<div>
+				<label for="dutyId">직책</label>
+				<select th:field="*{dutyId}">
+					<option value="">(없음)</option>
+					<option th:each="d : ${duties}" th:value="${d.id}" th:text="${d.name}">팀장</option>
+				</select>
+			</div>
+			<div>
+				<label for="email">이메일</label>
+				<div class="check-row">
+					<input type="email" th:field="*{email}" maxlength="100">
+					<button type="button" class="btn-secondary" data-check="email">중복확인</button>
+				</div>
+				<p class="field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></p>
+				<p class="check-result" data-result="email"></p>
+			</div>
+			<div>
+				<label for="phone">연락처</label>
+				<input type="tel" th:field="*{phone}" maxlength="30">
+			</div>
+			<div th:replace="~{fragments/address :: fields}"></div>
+
+			<div class="form-buttons span-2">
+				<a class="btn-secondary" th:href="@{/admin/members}">취소</a>
+				<button type="submit" class="btn-primary">저장</button>
+			</div>
+		</form>
+	</main>
+</div>
+<script th:inline="javascript">
+	// [중복확인]: 서버에 물어보고 입력칸 아래에 결과 표시. 값을 바꾸면 결과를 지운다.
+	// 저장할 때도 서버에서 다시 검사하므로 버튼을 누르지 않아도 중복 저장은 되지 않는다.
+	(function () {
+		var checkUrl = /*[[@{/admin/members/check}]]*/ '/admin/members/check';
+		var excludeId = /*[[${form.id}]]*/ null;
+
+		function show(field, ok, message) {
+			var el = document.querySelector('[data-result="' + field + '"]');
+			el.textContent = message;
+			el.className = 'check-result ' + (ok ? 'ok' : 'bad');
+		}
+
+		document.querySelectorAll('[data-check]').forEach(function (btn) {
+			var field = btn.dataset.check;
+			var input = document.getElementById(field);
+
+			btn.addEventListener('click', function () {
+				var params = new URLSearchParams({ field: field, value: input.value });
+				if (excludeId) params.set('excludeId', excludeId);
+				btn.disabled = true;
+				fetch(checkUrl + '?' + params, { headers: { 'Accept': 'application/json' } })
+					.then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+					.then(function (res) { show(field, res.available, res.message); })
+					.catch(function () { show(field, false, '확인 중 오류가 발생했습니다. 다시 시도하세요.'); })
+					.finally(function () { btn.disabled = false; });
+			});
+
+			input.addEventListener('input', function () { show(field, true, ''); });
+		});
+	})();
+
+	// 고른 사진을 저장 전에 미리 보여준다 (서버에서는 가운데 정사각형으로 잘라 저장)
+	(function () {
+		var input = document.getElementById('photo');
+		var preview = document.getElementById('photoPreview');
+		var remove = document.getElementById('removePhoto');
+		var original = preview.innerHTML;
+		input.addEventListener('change', function () {
+			var file = input.files[0];
+			if (!file) { preview.innerHTML = original; return; }
+			var img = document.createElement('img');
+			img.alt = '새 프로필 사진';
+			img.src = URL.createObjectURL(file);
+			preview.replaceChildren(img);
+			if (remove) remove.checked = false;
+		});
+		if (remove) {
+			remove.addEventListener('change', function () { preview.classList.toggle('removing', remove.checked); });
+		}
+	})();
+</script>
+</body>
+</html>

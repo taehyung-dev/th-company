@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- 좌측 게시판 트리. 폴더는 제목, 게시판은 링크 -->
+<nav th:fragment="tree" class="board-tree">
+	<th:block th:each="b : ${boards}">
+		<div th:if="${b.folder}" class="board-tree-folder"
+		     th:style="'padding-left:' + ${12 + b.depth * 14} + 'px'" th:text="${b.name}">전사</div>
+		<a th:unless="${b.folder}" th:href="@{/boards/{id}(id=${b.id})}"
+		   th:classappend="${board != null and board.id == b.id} ? 'active'"
+		   th:style="'padding-left:' + ${12 + b.depth * 14} + 'px'" th:text="${b.name}">공지사항</a>
+	</th:block>
+</nav>
+
+</body>
+</html>

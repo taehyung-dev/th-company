@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('홈')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar('home')}"></header>
+
+<div class="layout">
+
+	<main class="content">
+		<div class="home">
+			<div class="content-head">
+				<h2>홈</h2>
+				<span class="today" th:text="${today}">2026년 10월 22일 목요일</span>
+			</div>
+
+			<div class="widgets">
+				<section class="widget">
+					<h3>출퇴근 <span class="attend-date" th:text="${attendance.displayWorkDate()}">10월 24일 (금)</span></h3>
+					<div class="attend">
+						<div>
+							<span class="label">출근</span>
+							<span class="value" th:text="${attendance.displayCheckIn()}">--:--</span>
+						</div>
+						<div>
+							<span class="label">퇴근</span>
+							<span class="value" th:text="${attendance.displayCheckOut()}">--:--</span>
+						</div>
+						<div th:if="${attendance.displayWorked() != null}">
+							<span class="label">근무</span>
+							<span class="value value-sm" th:text="${attendance.displayWorked()}">8시간 30분</span>
+						</div>
+					</div>
+					<p class="attend-msg ok" th:if="${attendanceMessage}" th:text="${attendanceMessage}">퇴근 시간을 기록했습니다.</p>
+					<p class="attend-msg bad" th:if="${attendanceError}" th:text="${attendanceError}">오류</p>
+					<p class="attend-msg" th:if="${!attendance.checkedIn and attendanceError == null}">
+						오전 6시 이후 첫 로그인 시 출근이 기록됩니다.
+					</p>
+					<form class="attend-buttons" th:action="@{/attendance/check-out}" method="post"
+					      th:attr="data-confirm=${attendance.checkedOut} ? '이미 퇴근했습니다. 지금 시각으로 퇴근 시간을 다시 기록할까요?' : '퇴근하시겠습니까?'"
+					      onsubmit="return confirm(this.dataset.confirm)">
+						<button type="submit" class="btn-primary" th:disabled="${!attendance.checkedIn}"
+						        th:text="${attendance.checkedOut} ? '퇴근 다시 기록' : '퇴근'">퇴근</button>
+					</form>
+				</section>
+
+				<section class="widget">
+					<h3><a class="widget-link" th:href="@{/approval/box/pending}">결재 대기</a>
+						<span class="badge" th:text="${pendingDocs.totalElements}">0</span></h3>
+					<ul class="post-links" th:unless="${pendingDocs.empty}">
+						<li th:each="d : ${pendingDocs.content}">
+							<a th:href="@{/approval/docs/{id}(id=${d.id}, from='pending')}">
+								<span class="board-name" th:text="'[' + ${d.templateName} + ']'">[품의서]</span>
+								<span th:text="${d.title}">제목</span>
+							</a>
+							<span class="date" th:text="${d.drafterName}">홍길동</span>
+						</li>
+					</ul>
+					<p class="empty" th:if="${pendingDocs.empty}">대기 중인 결재 문서가 없습니다.</p>
+				</section>
+
+				<section class="widget">
+					<h3><a class="widget-link" th:href="@{/schedule}">오늘 일정</a></h3>
+					<ul class="today-list" th:unless="${#lists.isEmpty(todaySchedules)}">
+						<li th:each="s : ${todaySchedules}" th:classappend="'sch-' + ${s.type.css}">
+							<span class="legend-dot" th:title="${s.type.label}"></span>
+							<span class="time" th:text="${s.displayTime()}">09:00</span>
+							<a th:href="@{/schedule/{id}(id=${s.id})}" th:text="${s.title}">회의</a>
+						</li>
+					</ul>
+					<p class="empty" th:if="${#lists.isEmpty(todaySchedules)}">오늘 일정이 없습니다.</p>
+				</section>
+
+				<section class="widget widget-wide">
+					<h3>공지사항</h3>
+					<ul class="post-links" th:unless="${#lists.isEmpty(notices)}">
+						<li th:each="p : ${notices}">
+							<a th:href="@{/boards/{b}/posts/{id}(b=${p.boardId}, id=${p.id})}" th:text="${p.title}">공지</a>
+							<span class="date" th:text="${p.displayDate()}">10.23</span>
+						</li>
+					</ul>
+					<p class="empty" th:if="${#lists.isEmpty(notices)}">등록된 공지사항이 없습니다.</p>
+				</section>
+
+				<section class="widget">
+					<h3>최근 게시글</h3>
+					<ul class="post-links" th:unless="${#lists.isEmpty(recentPosts)}">
+						<li th:each="p : ${recentPosts}">
+							<a th:href="@{/boards/{b}/posts/{id}(b=${p.boardId}, id=${p.id})}">
+								<span class="board-name" th:text="'[' + ${p.boardName} + ']'">[자유게시판]</span>
+								<span th:text="${p.title}">제목</span>
+							</a>
+							<span class="date" th:text="${p.displayDate()}">10.23</span>
+						</li>
+					</ul>
+					<p class="empty" th:if="${#lists.isEmpty(recentPosts)}">게시글이 없습니다.</p>
+				</section>
+			</div>
+		</div>
+	</main>
+</div>
+</body>
+</html>

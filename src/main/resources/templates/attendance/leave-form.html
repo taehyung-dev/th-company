@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('휴가 신청')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar('attendance')}"></header>
+<div class="layout">
+	<main class="content">
+		<div class="board-layout">
+			<nav th:replace="~{attendance/fragments :: nav}"></nav>
+
+			<section class="board-main">
+				<div class="board-head">
+					<div>
+						<h2>휴가 신청</h2>
+						<p class="board-desc" th:text="'올해 남은 연차 ' + ${summary.displayRemaining()} + '일 (결재 중인 일수 제외)'">올해 남은 연차 15일</p>
+					</div>
+				</div>
+
+				<div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
+
+				<form class="board-panel post-form res-form" th:action="@{/attendance/leave}" th:object="${form}" method="post">
+					<label for="type">휴가 종류</label>
+					<select th:field="*{type}">
+						<option th:each="t : ${types}" th:value="${t}" th:text="${t.label} + (${t.deducted} ? '' : ' (연차 차감 없음)')"
+						        th:attr="data-half=${t.half}">연차</option>
+					</select>
+
+					<div class="period">
+						<div>
+							<label for="startDate">시작일</label>
+							<input type="date" th:field="*{startDate}" required>
+						</div>
+						<div id="endDateBox">
+							<label for="endDate">종료일</label>
+							<input type="date" th:field="*{endDate}" required>
+						</div>
+					</div>
+					<p class="hint-inline leave-hint">주말과 공휴일은 일수에서 빠집니다.</p>
+					<p class="field-error" th:if="${#fields.hasErrors('startDate')}" th:errors="*{startDate}"></p>
+					<p class="field-error" th:if="${#fields.hasErrors('endDate')}" th:errors="*{endDate}"></p>
+
+					<label for="reason">사유 <span class="hint-inline">(선택)</span></label>
+					<textarea th:field="*{reason}" rows="3" maxlength="500"></textarea>
+					<p class="field-error" th:if="${#fields.hasErrors('reason')}" th:errors="*{reason}"></p>
+
+					<div class="line-head">
+						<label>결재선 <span class="hint-inline" th:text="'(아래에서부터 순서대로 결재, 최대 ' + ${maxApprovers} + '명)'"></span></label>
+						<button type="button" class="btn-secondary" data-picker data-list="approverList" data-empty="approverEmpty"
+						        data-input="approverIds" th:attr="data-max=${maxApprovers}" data-title="결재선 지정" data-ordered="true">결재선 지정</button>
+					</div>
+					<ol id="approverList" class="line-list line-list-reverse">
+						<li th:each="a : ${selectedApprovers}"
+						    th:attr="data-id=${a.id},data-name=${a.name},data-grade=${a.grade},data-label=${a.label}">
+							<input type="hidden" name="approverIds" th:value="${a.id}">
+							<span class="line-name" th:text="${a.label}">홍길동</span>
+						</li>
+					</ol>
+					<p class="line-empty hint-inline" id="approverEmpty">[결재선 지정]을 눌러 결재자를 선택하세요.</p>
+
+					<div class="form-buttons">
+						<a class="btn-secondary" th:href="@{/attendance/leave}">취소</a>
+						<button type="submit" class="btn-primary">신청</button>
+					</div>
+				</form>
+
+				<dialog th:replace="~{approval/fragments :: picker}"></dialog>
+			</section>
+		</div>
+	</main>
+</div>
+<script th:src="@{/js/line-picker.js}"></script>
+<script>
+	// 반차는 하루만: 종료일 입력을 숨기고 시작일과 맞춘다
+	(function () {
+		var type = document.getElementById('type');
+		var start = document.getElementById('startDate');
+		var end = document.getElementById('endDate');
+		var box = document.getElementById('endDateBox');
+		function sync() {
+			var half = type.options[type.selectedIndex].dataset.half === 'true';
+			box.style.visibility = half ? 'hidden' : '';
+			if (half || !end.value || end.value < start.value) end.value = start.value;
+		}
+		type.addEventListener('change', sync);
+		start.addEventListener('change', sync);
+		sync();
+	})();
+</script>
+</body>
+</html>

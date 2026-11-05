@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${post.title})}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar('board')}"></header>
+<div class="layout">
+
+	<main class="content">
+		<div class="board-layout">
+			<nav th:replace="~{board/fragments :: tree}"></nav>
+
+			<section class="board-main">
+				<div class="alert alert-info" th:if="${message}" th:text="${message}"></div>
+				<div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
+
+				<article class="board-panel post">
+					<header class="post-head">
+						<a class="post-board" th:href="@{/boards/{id}(id=${board.id})}" th:text="${board.name}">자유게시판</a>
+						<h2>
+							<span class="tag tag-notice" th:if="${post.pinned}">공지</span>
+							<span th:text="${post.title}">제목</span>
+						</h2>
+						<div class="post-meta">
+							<strong th:text="${post.authorName}">홍길동</strong>
+							<span th:if="${post.authorGrade}" th:text="${post.authorGrade}">대리</span>
+							<span th:if="${post.authorDepartment}" th:text="${post.authorDepartment}">개발1팀</span>
+							<span class="sep">·</span>
+							<span th:text="${post.displayCreatedAt()}">2026.10.23 10:00</span>
+							<span th:if="${post.edited}" th:text="'(수정 ' + ${post.displayUpdatedAt()} + ')'">(수정)</span>
+							<span class="sep">·</span>
+							<span th:text="'조회 ' + ${post.viewCount}">조회 1</span>
+						</div>
+					</header>
+
+					<ul class="post-files" th:unless="${#lists.isEmpty(post.attachments)}">
+						<li th:each="f : ${post.attachments}">
+							<a th:href="@{/attachments/{id}(id=${f.id})}">
+								<span>📎</span> <span th:text="${f.name}">파일.pdf</span>
+							</a>
+							<span class="file-size" th:text="${f.displaySize()}">10 KB</span>
+						</li>
+					</ul>
+
+					<div class="post-body" th:text="${post.content}">본문</div>
+
+					<footer class="post-actions">
+						<a class="btn-secondary" th:href="@{/boards/{id}(id=${board.id})}">목록</a>
+						<th:block th:if="${can.board or post.authorLoginId == currentUser}">
+							<a class="btn-secondary" th:href="@{/boards/{b}/posts/{p}/edit(b=${board.id}, p=${post.id})}">수정</a>
+							<form th:action="@{/boards/{b}/posts/{p}/delete(b=${board.id}, p=${post.id})}" method="post"
+							      onsubmit="return confirm('이 글을 삭제할까요? 댓글과 첨부파일도 함께 삭제됩니다.')">
+								<button type="submit" class="btn-secondary danger">삭제</button>
+							</form>
+						</th:block>
+					</footer>
+				</article>
+
+				<section class="board-panel comments" id="comments">
+					<h3 th:text="'댓글 ' + ${#lists.size(post.comments)}">댓글 0</h3>
+					<ul class="comment-list">
+						<li th:each="c : ${post.comments}">
+							<div class="comment-head">
+								<strong th:text="${c.authorName}">홍길동</strong>
+								<span th:if="${c.authorDepartment}" th:text="${c.authorDepartment}">개발1팀</span>
+								<span th:text="${c.displayCreatedAt()}">2026.10.23 10:00</span>
+								<form th:if="${can.board or c.authorLoginId == currentUser}"
+								      th:action="@{/boards/{b}/posts/{p}/comments/{c}/delete(b=${board.id}, p=${post.id}, c=${c.id})}"
+								      method="post" onsubmit="return confirm('댓글을 삭제할까요?')">
+									<button type="submit" class="btn-link danger">삭제</button>
+								</form>
+							</div>
+							<p class="comment-body" th:text="${c.content}">댓글</p>
+						</li>
+					</ul>
+					<form class="comment-form" th:action="@{/boards/{b}/posts/{p}/comments(b=${board.id}, p=${post.id})}" method="post">
+						<textarea name="content" rows="3" maxlength="1000" placeholder="댓글을 입력하세요" required></textarea>
+						<button type="submit" class="btn-primary">등록</button>
+					</form>
+				</section>
+			</section>
+		</div>
+	</main>
+</div>
+</body>
+</html>

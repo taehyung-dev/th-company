@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${board.name})}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar('board')}"></header>
+<div class="layout">
+
+	<main class="content">
+		<div class="board-layout">
+			<nav th:replace="~{board/fragments :: tree}"></nav>
+
+			<section class="board-main">
+				<div class="board-head">
+					<div>
+						<h2 th:text="${board.name}">자유게시판</h2>
+						<p class="board-desc" th:if="${board.description}" th:text="${board.description}">설명</p>
+					</div>
+					<a th:if="${canWrite}" class="btn-primary" th:href="@{/boards/{id}/posts/new(id=${board.id})}">글쓰기</a>
+				</div>
+
+				<div class="alert alert-info" th:if="${message}" th:text="${message}"></div>
+
+				<div class="board-panel">
+					<table class="post-table">
+						<thead>
+						<tr>
+							<th class="col-no">번호</th>
+							<th>제목</th>
+							<th class="col-author">작성자</th>
+							<th class="col-date">작성일</th>
+							<th class="col-views">조회</th>
+						</tr>
+						</thead>
+						<tbody>
+						<tr th:each="p : ${pinned}" class="row-pinned">
+							<td class="col-no"><span class="tag tag-notice">공지</span></td>
+							<td th:replace="~{:: titleCell(${p})}"></td>
+							<td class="col-author" th:text="${p.authorName}">홍길동</td>
+							<td class="col-date" th:text="${p.displayDate()}">2026.10.23</td>
+							<td class="col-views" th:text="${p.viewCount}">0</td>
+						</tr>
+						<tr th:each="p, s : ${posts.content}">
+							<td class="col-no" th:text="${posts.totalElements - posts.number * posts.size - s.index}">1</td>
+							<td th:fragment="titleCell(p)" class="col-title">
+								<a th:href="@{/boards/{b}/posts/{id}(b=${board.id}, id=${p.id})}" th:text="${p.title}">제목</a>
+								<span class="comment-count" th:if="${p.commentCount > 0}" th:text="'[' + ${p.commentCount} + ']'">[2]</span>
+								<span class="clip" th:if="${p.attachmentCount > 0}" title="첨부파일">📎</span>
+								<span class="tag tag-new" th:if="${p.new}">N</span>
+							</td>
+							<td class="col-author" th:text="${p.authorName}">홍길동</td>
+							<td class="col-date" th:text="${p.displayDate()}">2026.10.23</td>
+							<td class="col-views" th:text="${p.viewCount}">0</td>
+						</tr>
+						</tbody>
+					</table>
+					<p th:if="${posts.empty and #lists.isEmpty(pinned)}" class="empty post-empty"
+					   th:text="${q != null and !#strings.isEmpty(q)} ? '검색 결과가 없습니다.' : '등록된 글이 없습니다.'">등록된 글이 없습니다.</p>
+				</div>
+
+				<nav class="pagination" th:if="${posts.totalPages > 1}">
+					<a th:if="${posts.hasPrevious()}"
+					   th:href="@{/boards/{id}(id=${board.id}, page=${posts.number}, field=${field}, q=${q})}">‹</a>
+					<a th:each="n : ${pages}" th:text="${n}"
+					   th:classappend="${n == posts.number + 1} ? 'current'"
+					   th:href="@{/boards/{id}(id=${board.id}, page=${n}, field=${field}, q=${q})}">1</a>
+					<a th:if="${posts.hasNext()}"
+					   th:href="@{/boards/{id}(id=${board.id}, page=${posts.number + 2}, field=${field}, q=${q})}">›</a>
+				</nav>
+
+				<form class="board-search" th:action="@{/boards/{id}(id=${board.id})}" method="get">
+					<select name="field">
+						<option value="all" th:selected="${field == 'all'}">제목+내용</option>
+						<option value="title" th:selected="${field == 'title'}">제목</option>
+						<option value="content" th:selected="${field == 'content'}">내용</option>
+						<option value="author" th:selected="${field == 'author'}">작성자</option>
+					</select>
+					<input type="search" name="q" th:value="${q}" placeholder="검색어">
+					<button type="submit" class="btn-secondary">검색</button>
+				</form>
+			</section>
+		</div>
+	</main>
+</div>
+</body>
+</html>

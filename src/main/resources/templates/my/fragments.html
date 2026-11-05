@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- 마이페이지 좌측 메뉴 -->
+<nav th:fragment="nav" class="board-tree my-nav">
+	<div class="board-tree-folder">마이페이지</div>
+	<a th:href="@{/my}" th:classappend="${menu == 'info'} ? 'active'"><span>내 정보</span></a>
+	<a th:href="@{/my/edit}" th:classappend="${menu == 'edit'} ? 'active'"><span>정보 수정</span></a>
+	<a th:href="@{/my/password}" th:classappend="${menu == 'password'} ? 'active'"><span>비밀번호 변경</span></a>
+	<div class="board-tree-folder">바로가기</div>
+	<a th:href="@{/attendance}"><span>내 근태</span></a>
+	<a th:href="@{/approval/box/pending}"><span>미결문서</span></a>
+	<a th:href="@{/reservations/rooms/my}"><span>내 회의실 예약</span></a>
+	<a th:href="@{/reservations/resources/my}"><span>내 자원 예약</span></a>
+</nav>
+
+<!-- 프로필 사진 (없으면 이름 첫 글자) -->
+<div th:fragment="avatar(profile)" class="my-avatar">
+	<img th:if="${profile.photoUrl}" th:src="@{${profile.photoUrl}}" alt="프로필 사진">
+	<span th:unless="${profile.photoUrl}" th:text="${profile.initial()}">김</span>
+</div>
+
+</body>
+</html>

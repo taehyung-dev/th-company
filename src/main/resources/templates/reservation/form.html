@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${form.kind.label} + (${form.id == null} ? ' 예약하기' : ' 예약 수정'))}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar(${kind.menuKey})}"></header>
+<div class="layout">
+	<main class="content">
+		<div class="narrow">
+			<div class="board-head">
+				<h2 th:text="${form.kind.label} + (${form.id == null} ? ' 예약하기' : ' 예약 수정')">회의실 예약하기</h2>
+			</div>
+
+			<div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
+
+			<form class="board-panel post-form res-form" th:action="@{/reservations}" th:object="${form}" method="post" id="resForm" enctype="multipart/form-data">
+				<input type="hidden" th:field="*{id}">
+				<input type="hidden" th:field="*{kind}">
+
+				<label for="resourceId" th:text="${form.kind.label}">회의실</label>
+				<select th:field="*{resourceId}" required>
+					<option value="" th:text="${form.kind.label} + '을(를) 선택하세요'">회의실을 선택하세요</option>
+					<optgroup th:each="g : ${resourceGroups}" th:label="${g.key.label}">
+						<option th:each="r : ${g.value}" th:value="${r.id}"
+						        th:text="${r.name} + (${r.location} != null ? ' · ' + ${r.location} : '') + (${r.capacity} != null ? ' · ' + ${r.capacity} + '인' : '') + (${r.enabled} ? '' : ' (사용 안 함)')">대회의실</option>
+					</optgroup>
+				</select>
+				<p class="field-error" th:if="${#fields.hasErrors('resourceId')}" th:errors="*{resourceId}"></p>
+
+				<!-- 자원: 시작과 종료를 날짜까지 따로 정한다 -->
+				<div class="period" th:if="${multiDay}">
+					<div>
+						<label for="date">시작</label>
+						<div class="period-row">
+							<input type="date" th:field="*{date}" required>
+							<input type="time" th:field="*{startTime}" step="600" required>
+						</div>
+					</div>
+					<div>
+						<label for="endDate">종료</label>
+						<div class="period-row">
+							<input type="date" th:field="*{endDate}" required>
+							<input type="time" th:field="*{endTime}" step="600" required>
+						</div>
+					</div>
+				</div>
+				<!-- 회의실: 하루 안에서 -->
+				<div class="period" th:unless="${multiDay}">
+					<div>
+						<label for="date">날짜</label>
+						<input type="date" th:field="*{date}" required>
+					</div>
+					<div>
+						<label for="startTime">시간</label>
+						<div class="period-row">
+							<input type="time" th:field="*{startTime}" step="600" required>
+							<span class="res-tilde">~</span>
+							<input type="time" th:field="*{endTime}" step="600" required>
+						</div>
+					</div>
+				</div>
+				<p class="field-error" th:if="${#fields.hasErrors('date')}" th:errors="*{date}"></p>
+				<p class="field-error" th:if="${#fields.hasErrors('startTime')}" th:errors="*{startTime}"></p>
+				<p class="field-error" th:if="${#fields.hasErrors('endTime')}" th:errors="*{endTime}"></p>
+
+				<!-- 회의실 새 예약: 반복 -->
+				<div class="res-repeat" th:if="${!multiDay and form.id == null}">
+					<div class="period">
+						<div>
+							<label for="repeat">반복</label>
+							<select th:field="*{repeat}">
+								<option th:each="r : ${repeatRules}" th:value="${r}" th:text="${r.label}">매주</option>
+							</select>
+						</div>
+						<div id="repeatUntilBox">
+							<label for="repeatUntil">반복 종료일 <span class="hint-inline">(최대 1년)</span></label>
+							<input type="date" th:field="*{repeatUntil}">
+						</div>
+					</div>
+					<div id="repeatOptions">
+						<label class="check"><input type="checkbox" th:field="*{skipHolidays}"> 공휴일 건너뛰기</label>
+						<label class="check"><input type="checkbox" th:field="*{skipConflicts}"> 겹치는 날 건너뛰기</label>
+					</div>
+				</div>
+
+				<div class="res-taken" th:if="${form.resourceId != null}">
+					<strong th:text="${multiDay} ? '이 기간 예약' : '이 날 예약된 시간'">이 날 예약된 시간</strong>
+					<ul th:unless="${#lists.isEmpty(taken)}">
+						<li th:each="t : ${taken}" th:classappend="${t.self} ? 'mine'">
+							<span class="res-taken-time" th:text="${t.time}">10:00 ~ 11:00</span>
+							<span th:text="${t.title} + ' · ' + ${t.ownerName}">주간 회의 · 홍길동</span>
+						</li>
+					</ul>
+					<p class="empty" th:if="${#lists.isEmpty(taken)}">아직 예약이 없습니다.</p>
+				</div>
+
+				<label for="title">사용 목적</label>
+				<input type="text" th:field="*{title}" maxlength="100" placeholder="예: 주간 팀 회의" required>
+				<p class="field-error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
+
+				<label for="memo">메모</label>
+				<textarea th:field="*{memo}" rows="3" maxlength="500" placeholder="참석 인원, 준비물 등 (선택)"></textarea>
+				<p class="field-error" th:if="${#fields.hasErrors('memo')}" th:errors="*{memo}"></p>
+
+				<th:block th:replace="~{fragments/files :: edit(${files}, ${form.deleteFileIds})}"></th:block>
+
+				<div class="form-buttons">
+					<a class="btn-secondary" th:href="${form.id == null} ? @{/reservations/{k}(k=${form.kind.path},date=${form.date})} : @{/reservations/{id}(id=${form.id})}">취소</a>
+					<button type="submit" class="btn-primary" th:text="${form.id == null} ? '예약' : '저장'">예약</button>
+				</div>
+			</form>
+		</div>
+	</main>
+</div>
+<script th:inline="javascript">
+	// 새 예약: 자원이나 날짜를 바꾸면 그날 예약된 시간을 다시 보여 준다 (입력한 시간은 유지)
+	(function () {
+		var isNew = /*[[${form.id == null}]]*/ true;
+		var base = /*[[@{/reservations/{k}/new(k=${form.kind.path})}]]*/ '/reservations/rooms/new';
+		var start = document.getElementById('startTime');
+		var end = document.getElementById('endTime');
+		var resource = document.getElementById('resourceId');
+		var date = document.getElementById('date');
+		var endDate = document.getElementById('endDate');
+
+		// 반복을 고르면 종료일과 옵션을 보여 준다
+		var repeat = document.getElementById('repeat');
+		if (repeat) {
+			var syncRepeat = function () {
+				var on = repeat.value !== 'NONE';
+				document.getElementById('repeatUntilBox').style.visibility = on ? '' : 'hidden';
+				document.getElementById('repeatOptions').hidden = !on;
+			};
+			repeat.addEventListener('change', syncRepeat);
+			syncRepeat();
+		}
+
+		start.addEventListener('change', function () {
+			// 시작을 바꾸면 종료가 시작보다 이르지 않게 1시간 뒤로 (며칠에 걸친 예약은 그대로)
+			if (endDate && endDate.value > date.value) return;
+			if (start.value && (!end.value || end.value <= start.value)) {
+				var p = start.value.split(':');
+				var h = Math.min(+p[0] + 1, 23);
+				end.value = ('0' + h).slice(-2) + ':' + (h === 23 && +p[0] >= 23 ? '50' : p[1]);
+			}
+		});
+		if (!isNew) return;
+		function reload() {
+			if (!resource.value || !date.value) return;
+			var title = document.getElementById('title').value;
+			if (title && !confirm('입력한 사용 목적이 지워집니다. 예약된 시간을 다시 볼까요?')) return;
+			var url = base + '?resource=' + resource.value + '&date=' + date.value + '&start=' + start.value;
+			if (endDate) url += '&endDate=' + endDate.value + '&end=' + end.value;
+			location.href = url;
+		}
+		resource.addEventListener('change', reload);
+		date.addEventListener('change', function () {
+			if (endDate && (!endDate.value || endDate.value < date.value)) endDate.value = date.value;
+			reload();
+		});
+		if (endDate) endDate.addEventListener('change', reload);
+	})();
+</script>
+</body>
+</html>

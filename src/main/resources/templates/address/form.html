@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${form.id == null} ? '연락처 추가' : '연락처 수정')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar('address')}"></header>
+<div class="layout">
+	<main class="content">
+		<div class="board-layout">
+			<nav th:replace="~{address/fragments :: nav}"></nav>
+
+			<section class="board-main">
+				<div class="board-head">
+					<h2 th:text="${form.id == null} ? '연락처 추가' : '연락처 수정'">연락처 추가</h2>
+				</div>
+
+				<div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
+
+				<form class="board-panel post-form contact-form" th:action="@{/address/personal}" th:object="${form}" method="post">
+					<input type="hidden" th:field="*{id}">
+
+					<div class="contact-grid">
+						<div>
+							<label for="name">이름 <span class="req">*</span></label>
+							<input type="text" th:field="*{name}" maxlength="50" required>
+							<p class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></p>
+						</div>
+						<div>
+							<label for="groupId">그룹</label>
+							<select th:field="*{groupId}">
+								<option value="">그룹 없음</option>
+								<option th:each="gr : ${nav.groups}" th:value="${gr.id}" th:text="${gr.name}">거래처</option>
+							</select>
+						</div>
+						<div>
+							<label for="company">회사</label>
+							<input type="text" th:field="*{company}" maxlength="100">
+							<p class="field-error" th:if="${#fields.hasErrors('company')}" th:errors="*{company}"></p>
+						</div>
+						<div>
+							<label for="department">부서</label>
+							<input type="text" th:field="*{department}" maxlength="100">
+							<p class="field-error" th:if="${#fields.hasErrors('department')}" th:errors="*{department}"></p>
+						</div>
+						<div>
+							<label for="position">직위</label>
+							<input type="text" th:field="*{position}" maxlength="50">
+							<p class="field-error" th:if="${#fields.hasErrors('position')}" th:errors="*{position}"></p>
+						</div>
+						<div>
+							<label for="email">이메일</label>
+							<input type="email" th:field="*{email}" maxlength="100">
+							<p class="field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></p>
+						</div>
+						<div>
+							<label for="mobile">휴대폰</label>
+							<input type="tel" th:field="*{mobile}" maxlength="30" placeholder="010-0000-0000">
+							<p class="field-error" th:if="${#fields.hasErrors('mobile')}" th:errors="*{mobile}"></p>
+						</div>
+						<div>
+							<label for="phone">전화</label>
+							<input type="tel" th:field="*{phone}" maxlength="30" placeholder="02-000-0000">
+							<p class="field-error" th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}"></p>
+						</div>
+						<div th:replace="~{fragments/address :: fields}"></div>
+						<div class="span-2">
+							<label for="memo">메모</label>
+							<textarea th:field="*{memo}" rows="4" maxlength="1000"></textarea>
+							<p class="field-error" th:if="${#fields.hasErrors('memo')}" th:errors="*{memo}"></p>
+						</div>
+					</div>
+
+					<label class="check">
+						<input type="checkbox" th:field="*{favorite}"> ★ 즐겨찾기
+					</label>
+
+					<div class="form-buttons">
+						<a class="btn-secondary" th:href="@{/address/personal}">취소</a>
+						<button type="submit" class="btn-primary">저장</button>
+					</div>
+				</form>
+			</section>
+		</div>
+	</main>
+</div>
+</body>
+</html>

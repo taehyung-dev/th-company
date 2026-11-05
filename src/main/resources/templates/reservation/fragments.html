@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- 회의실 예약 / 자원 예약 좌측 메뉴: 예약 현황 | 내 예약 | 관리(그 구분의 관리 권한자) -->
+<nav th:fragment="nav" class="board-tree approval-nav res-nav">
+	<a class="btn-primary approval-new" th:href="@{/reservations/{k}/new(k=${kind.path})}"
+	   th:text="${kind.label} + ' 예약하기'">회의실 예약하기</a>
+	<a th:href="@{/reservations/{k}(k=${kind.path})}" th:classappend="${menu == 'day'} ? 'active'"><span>예약 현황</span></a>
+	<a th:href="@{/reservations/{k}/my(k=${kind.path})}" th:classappend="${menu == 'my'} ? 'active'"><span>내 예약</span></a>
+	<th:block th:if="${canManage}">
+		<div class="board-tree-folder" th:text="${kind.permission.label}">회의실관리자</div>
+		<a th:href="@{/admin/{k}(k=${kind.path})}"><span th:text="${kind.label} + ' 관리'">회의실 관리</span></a>
+	</th:block>
+	<p class="attend-rule">
+		10분 단위로 예약합니다.<br>
+		<th:block th:text="'같은 ' + ${kind.label} + '은(는) 시간이 겹치게 예약할 수 없습니다.'">같은 회의실은 시간이 겹치게 예약할 수 없습니다.</th:block>
+	</p>
+</nav>
+
+<!-- 자원 종류 표시 -->
+<span th:fragment="type(t)" class="res-type" th:classappend="'res-' + ${t.css}" th:text="${t.label}">회의실</span>
+
+</body>
+</html>

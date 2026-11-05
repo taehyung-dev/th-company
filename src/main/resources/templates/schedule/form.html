@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${form.id == null} ? '일정 등록' : '일정 수정')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar('schedule')}"></header>
+<div class="layout">
+	<main class="content">
+		<div class="narrow">
+			<div class="board-head">
+				<h2 th:text="${form.id == null} ? '일정 등록' : '일정 수정'">일정 등록</h2>
+			</div>
+
+			<div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
+
+			<form class="board-panel post-form" th:action="@{/schedule}" th:object="${form}" method="post" enctype="multipart/form-data">
+				<input type="hidden" th:field="*{id}">
+
+				<label>종류</label>
+				<div class="type-choice">
+					<label th:each="t : ${allowedTypes}" class="type-option" th:classappend="'sch-' + ${t.css}">
+						<input type="radio" th:field="*{type}" th:value="${t}">
+						<span class="legend-dot"></span>
+						<span th:text="${t.label}">개인일정</span>
+					</label>
+				</div>
+
+				<label for="title">제목</label>
+				<input type="text" th:field="*{title}" maxlength="200" required>
+				<p class="field-error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
+
+				<label class="check">
+					<input type="checkbox" th:field="*{allDay}" id="allDay"> 종일
+				</label>
+
+				<div class="period">
+					<div>
+						<label for="startDate">시작</label>
+						<div class="period-row">
+							<input type="date" th:field="*{startDate}" required>
+							<input type="time" th:field="*{startTime}" class="time-input" step="600">
+						</div>
+					</div>
+					<div>
+						<label for="endDate">종료</label>
+						<div class="period-row">
+							<input type="date" th:field="*{endDate}" required>
+							<input type="time" th:field="*{endTime}" class="time-input" step="600">
+						</div>
+					</div>
+				</div>
+				<p class="field-error" th:if="${#fields.hasErrors('startDate')}" th:errors="*{startDate}"></p>
+				<p class="field-error" th:if="${#fields.hasErrors('endDate')}" th:errors="*{endDate}"></p>
+
+				<label for="description">내용</label>
+				<textarea th:field="*{description}" rows="5" maxlength="2000"></textarea>
+
+				<th:block th:replace="~{fragments/files :: edit(${files}, ${form.deleteFileIds})}"></th:block>
+
+				<div class="form-buttons">
+					<a class="btn-secondary" th:href="${form.id == null} ? @{/schedule} : @{/schedule/{id}(id=${form.id})}">취소</a>
+					<button type="submit" class="btn-primary">저장</button>
+				</div>
+			</form>
+		</div>
+	</main>
+</div>
+<script>
+	// 종일이면 시간 입력 숨김, 시작일을 바꾸면 종료일이 더 빠르지 않게 맞춤
+	(function () {
+		var allDay = document.getElementById('allDay');
+		var start = document.getElementById('startDate');
+		var end = document.getElementById('endDate');
+		function toggle() {
+			document.querySelectorAll('.time-input').forEach(function (t) { t.style.display = allDay.checked ? 'none' : ''; });
+		}
+		allDay.addEventListener('change', toggle);
+		start.addEventListener('change', function () {
+			if (!end.value || end.value < start.value) end.value = start.value;
+		});
+		toggle();
+	})();
+</script>
+</body>
+</html>

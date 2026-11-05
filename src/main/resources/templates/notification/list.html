@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('알림')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar('notifications')}"></header>
+<div class="layout">
+	<main class="content">
+		<div class="narrow">
+			<div class="board-head">
+				<h2>알림</h2>
+				<form th:action="@{/notifications/read-all}" method="post" th:if="${unreadNotifications > 0}">
+					<button type="submit" class="btn-secondary">모두 읽음</button>
+				</form>
+			</div>
+
+			<div class="board-panel">
+				<ul class="noti-list noti-page">
+					<li th:each="n : ${items}" th:classappend="${n.read} ? 'read'">
+						<a th:href="@{/notifications/{id}/open(id=${n.id})}">
+							<span class="noti-meta"><span th:text="${n.category}">결재</span> · <span th:text="${n.time}">11.05 10:00</span></span>
+							<span class="noti-text" th:text="${n.message}">알림</span>
+						</a>
+					</li>
+					<li class="noti-empty" th:if="${items.isEmpty()}">알림이 없습니다.</li>
+				</ul>
+			</div>
+
+			<nav class="pagination" th:if="${items.totalPages > 1}">
+				<a th:if="${items.hasPrevious()}" th:href="@{/notifications(page=${items.number})}">‹</a>
+				<a th:each="p : ${#numbers.sequence(1, items.totalPages)}" th:classappend="${p == items.number + 1} ? 'current'"
+				   th:href="@{/notifications(page=${p})}" th:text="${p}">1</a>
+				<a th:if="${items.hasNext()}" th:href="@{/notifications(page=${items.number + 2})}">›</a>
+			</nav>
+		</div>
+	</main>
+</div>
+</body>
+</html>

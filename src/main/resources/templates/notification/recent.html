@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+<ul class="noti-list">
+	<li th:each="n : ${items}" th:classappend="${n.read} ? 'read'">
+		<a th:href="@{/notifications/{id}/open(id=${n.id})}">
+			<span class="noti-meta"><span th:text="${n.category}">결재</span> · <span th:text="${n.time}">11.05 10:00</span></span>
+			<span class="noti-text" th:text="${n.message}">알림</span>
+		</a>
+	</li>
+	<li class="noti-empty" th:if="${items.isEmpty()}">새 알림이 없습니다.</li>
+</ul>
+<a class="noti-all" th:href="@{/notifications}">전체 보기</a>
+</body>
+</html>

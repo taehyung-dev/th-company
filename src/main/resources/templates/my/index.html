@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('마이페이지')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar('my')}"></header>
+<div class="layout">
+	<main class="content">
+		<div class="board-layout">
+			<nav th:replace="~{my/fragments :: nav}"></nav>
+
+			<section class="board-main">
+				<div class="board-head">
+					<h2>내 정보</h2>
+					<a class="btn-secondary" th:href="@{/my/edit}">정보 수정</a>
+				</div>
+
+				<div class="alert alert-info" th:if="${message}" th:text="${message}"></div>
+
+				<!-- 프로필 -->
+				<div class="board-panel my-profile">
+					<div th:replace="~{my/fragments :: avatar(${profile})}"></div>
+					<div class="my-profile-main">
+						<div class="my-name">
+							<strong th:text="${profile.name}">유성훈</strong>
+							<span th:if="${profile.position()}" th:text="${profile.position()}">부장 · 팀장</span>
+						</div>
+						<p class="my-dept" th:text="${profile.departmentName} ?: '소속 부서 없음'">개발1팀</p>
+						<div class="my-roles">
+							<span class="tag tag-info" th:if="${profile.admin}">시스템 관리자</span>
+							<span class="tag tag-muted" th:each="p : ${profile.permissions}" th:text="${p}">게시판관리자</span>
+						</div>
+					</div>
+				</div>
+
+				<div class="board-panel my-info">
+					<dl>
+						<dt>아이디</dt><dd th:text="${profile.loginId}">yoosh</dd>
+						<dt>사번</dt><dd th:text="${profile.employeeNo} ?: '-'">2018001</dd>
+						<dt>이메일</dt><dd th:text="${profile.email} ?: '-'">yoosh@th-company.local</dd>
+						<dt>연락처</dt><dd th:text="${profile.phone} ?: '-'">010-0000-0000</dd>
+						<dt>입사일</dt><dd th:text="${profile.hireDate != null} ? ${#temporals.format(profile.hireDate, 'yyyy.MM.dd')} : '-'">2018.03.02</dd>
+						<dt class="row-start">주소</dt>
+						<dd class="wide">
+							<th:block th:if="${profile.address != null}">
+								<span th:text="'(' + ${profile.address.zipCode} + ') ' + ${profile.address.roadAddress}">(13494) 경기 성남시 분당구 판교역로 235</span>
+								<span th:if="${profile.address.detail}" th:text="${profile.address.detail}">101동 101호</span>
+							</th:block>
+							<th:block th:if="${profile.address == null}">-</th:block>
+						</dd>
+					</dl>
+					<p class="my-note">이름, 부서, 직급·직책, 사번, 입사일은 관리자에게 변경을 요청하세요.</p>
+				</div>
+
+				<!-- 나의 현황 -->
+				<h3 class="res-section">나의 현황</h3>
+				<div class="my-cards">
+					<a class="my-card" th:href="@{/approval/box/pending}">
+						<span>결재할 문서</span>
+						<strong th:classappend="${pendingCount > 0} ? 'hot'" th:text="${pendingCount} + '건'">0건</strong>
+					</a>
+					<a class="my-card" th:href="@{/attendance}">
+						<span>오늘 출근</span>
+						<strong th:text="${attendance.displayCheckIn()}">09:00</strong>
+						<small th:text="'퇴근 ' + ${attendance.displayCheckOut()}">퇴근 --:--</small>
+					</a>
+					<a class="my-card" th:href="@{/attendance/leave}">
+						<span>남은 연차</span>
+						<strong th:text="${leave.displayRemaining()} + '일'">15일</strong>
+						<small th:text="'사용 ' + ${leave.displayUsed()} + '일'">사용 0일</small>
+					</a>
+					<a class="my-card" th:href="@{/schedule}">
+						<span>오늘 일정</span>
+						<strong th:text="${scheduleCount} + '건'">0건</strong>
+					</a>
+					<a class="my-card" th:href="@{/reservations/rooms/my}">
+						<span>다가오는 회의실 예약</span>
+						<strong th:text="${roomCount} + '건'">0건</strong>
+					</a>
+					<a class="my-card" th:href="@{/reservations/resources/my}">
+						<span>다가오는 자원 예약</span>
+						<strong th:text="${resourceCount} + '건'">0건</strong>
+					</a>
+				</div>
+
+				<div class="board-panel">
+					<table class="post-table res-table">
+						<thead>
+						<tr>
+							<th class="col-day">날짜</th>
+							<th class="col-period">시간</th>
+							<th class="col-res">예약</th>
+							<th class="col-title">사용 목적</th>
+						</tr>
+						</thead>
+						<tbody>
+						<tr th:each="r : ${upcoming}">
+							<td class="col-day" th:text="${r.shortDate()}">2026.10.29 (목)</td>
+							<td class="col-period" th:text="${r.period()}">10:00 ~ 11:00</td>
+							<td class="col-res">
+								<th:block th:replace="~{reservation/fragments :: type(${r.resourceType})}"></th:block>
+								<span th:text="${r.resourceName}">대회의실</span>
+							</td>
+							<td class="col-title"><a th:href="@{/reservations/{id}(id=${r.id})}" th:text="${r.title}">주간 회의</a></td>
+						</tr>
+						<tr th:if="${#lists.isEmpty(upcoming)}">
+							<td colspan="4" class="empty">다가오는 예약이 없습니다.</td>
+						</tr>
+						</tbody>
+					</table>
+				</div>
+			</section>
+		</div>
+	</main>
+</div>
+</body>
+</html>

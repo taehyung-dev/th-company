@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('사용자 관리')}"></head>
+<body>
+<header th:replace="~{admin/fragments :: header}"></header>
+<div class="layout">
+	<nav th:replace="~{admin/fragments :: sidebar}"></nav>
+
+	<main class="content">
+		<div class="content-head">
+			<h2>사용자 관리</h2>
+			<span class="today" th:text="${#lists.size(members)} + '명'">0명</span>
+			<a class="btn-primary head-action" th:href="@{/admin/members/new}">사용자 등록</a>
+		</div>
+		<th:block th:replace="~{admin/fragments :: alerts}"></th:block>
+
+		<form class="filters" th:action="@{/admin/members}" method="get">
+			<input type="search" name="q" th:value="${q}" placeholder="이름, 아이디, 사번">
+			<select name="dept">
+				<option value="">전체 부서</option>
+				<option th:each="d : ${departments}" th:value="${d.id}" th:selected="${d.id == dept}"
+				        th:text="${#strings.repeat('　', d.depth) + d.name}">부서</option>
+			</select>
+			<select name="status">
+				<option value="" th:selected="${status == ''}">전체 상태</option>
+				<option value="active" th:selected="${status == 'active'}">사용</option>
+				<option value="inactive" th:selected="${status == 'inactive'}">사용 중지</option>
+			</select>
+			<button type="submit" class="btn-secondary">검색</button>
+		</form>
+
+		<section class="panel table-wrap">
+			<table class="table">
+				<thead>
+				<tr><th>이름</th><th>아이디</th><th>사번</th><th>부서</th><th>직급</th><th>직책</th><th>이메일</th><th>권한</th><th>상태</th></tr>
+				</thead>
+				<tbody>
+				<tr th:each="m : ${members}" th:classappend="${!m.enabled} ? 'row-disabled'">
+					<td><a th:href="@{/admin/members/{id}(id=${m.id})}" th:text="${m.name}">홍길동</a></td>
+					<td th:text="${m.loginId}">hong</td>
+					<td th:text="${m.employeeNo}"></td>
+					<td th:text="${m.departmentName}"></td>
+					<td th:text="${m.gradeName}"></td>
+					<td th:text="${m.dutyName}"></td>
+					<td th:text="${m.email}"></td>
+					<td>
+						<span th:text="${m.role.name() == 'ADMIN'} ? '관리자' : '일반'">일반</span>
+						<span class="tag perm-tag" th:each="p : ${m.permissions}" th:text="${p.label}">게시판관리자</span>
+					</td>
+					<td><span class="tag" th:classappend="${m.enabled} ? 'tag-on' : 'tag-off'"
+					          th:text="${m.enabled} ? '사용' : '사용 중지'">사용</span></td>
+				</tr>
+				<tr th:if="${#lists.isEmpty(members)}">
+					<td colspan="9" class="empty">조건에 맞는 사용자가 없습니다.</td>
+				</tr>
+				</tbody>
+			</table>
+		</section>
+	</main>
+</div>
+</body>
+</html>

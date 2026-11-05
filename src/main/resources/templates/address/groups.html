@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('주소록 그룹 관리')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar('address')}"></header>
+<div class="layout">
+	<main class="content">
+		<div class="board-layout">
+			<nav th:replace="~{address/fragments :: nav}"></nav>
+
+			<section class="board-main">
+				<div class="board-head">
+					<div>
+						<h2>그룹 관리</h2>
+						<p class="board-desc">개인 주소록 그룹을 추가하거나 이름을 바꿉니다. 그룹을 지워도 연락처는 남습니다.</p>
+					</div>
+				</div>
+
+				<div class="alert alert-info" th:if="${message}" th:text="${message}"></div>
+				<div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
+
+				<div class="board-panel group-panel">
+					<form class="group-add" th:action="@{/address/groups}" method="post">
+						<input type="text" name="name" maxlength="50" placeholder="새 그룹 이름 (예: 거래처)" required>
+						<button type="submit" class="btn-primary">추가</button>
+					</form>
+
+					<ul class="group-list">
+						<li th:each="gr : ${nav.groups}">
+							<form class="group-rename" th:action="@{/address/groups/{id}/rename(id=${gr.id})}" method="post">
+								<input type="text" name="name" th:value="${gr.name}" maxlength="50" required aria-label="그룹 이름">
+								<button type="submit" class="btn-secondary">이름 변경</button>
+							</form>
+							<a class="group-count" th:href="@{/address/personal(g=${gr.id})}" th:text="${gr.count} + '명'">0명</a>
+							<form th:action="@{/address/groups/{id}/delete(id=${gr.id})}" method="post"
+							      th:attr="data-confirm=${gr.name} + ' 그룹을 삭제할까요? 연락처는 그룹 없음으로 남습니다.'"
+							      onsubmit="return confirm(this.dataset.confirm)">
+								<button type="submit" class="btn-link danger">삭제</button>
+							</form>
+						</li>
+						<li class="empty" th:if="${#lists.isEmpty(nav.groups)}">아직 그룹이 없습니다.</li>
+					</ul>
+				</div>
+			</section>
+		</div>
+	</main>
+</div>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('메뉴 순서')}"></head>
+<body>
+<header th:replace="~{admin/fragments :: header}"></header>
+<div class="layout">
+	<nav th:replace="~{admin/fragments :: sidebar}"></nav>
+
+	<main class="content">
+		<div class="content-head">
+			<h2>메뉴 순서</h2>
+			<span class="today">사용자 화면 상단 메뉴의 순서입니다. 끌어서 놓거나 ▲▼ 버튼으로 바꾼 뒤 저장하세요.</span>
+		</div>
+		<th:block th:replace="~{admin/fragments :: alerts}"></th:block>
+
+		<section class="panel menu-panel">
+			<form id="menuForm" th:action="@{/admin/menus}" method="post">
+				<ol class="menu-order" id="menuOrder">
+					<li th:each="m, st : ${menus}" draggable="true" th:attr="data-menu=${m.name()}">
+						<span class="drag-handle" aria-hidden="true">⠿</span>
+						<span class="menu-no" th:text="${st.count}">1</span>
+						<strong th:text="${m.label}">홈</strong>
+						<span class="menu-path" th:text="${m.path} ?: '준비 중'">/</span>
+						<input type="hidden" name="menus" th:value="${m.name()}">
+						<span class="menu-move">
+							<button type="button" class="btn-secondary" data-move="-1" title="위로">▲</button>
+							<button type="button" class="btn-secondary" data-move="1" title="아래로">▼</button>
+						</span>
+					</li>
+				</ol>
+
+				<div class="menu-preview">
+					<span class="hint-inline">미리보기</span>
+					<div class="menubar preview-bar-menu" id="menuPreview">
+						<a th:each="m : ${menus}" th:text="${m.label}">홈</a>
+					</div>
+				</div>
+
+				<div class="form-buttons">
+					<button type="submit" class="btn-secondary" form="resetForm">기본 순서로</button>
+					<button type="submit" class="btn-primary" id="saveButton">저장</button>
+				</div>
+			</form>
+			<form id="resetForm" th:action="@{/admin/menus/reset}" method="post"
+			      onsubmit="return confirm('메뉴 순서를 기본값으로 되돌릴까요?')"></form>
+		</section>
+	</main>
+</div>
+<script>
+	// ▲▼ 와 끌어서 놓기로 순서를 바꾸고, 번호와 미리보기를 다시 그린다
+	(function () {
+		var list = document.getElementById('menuOrder');
+		var preview = document.getElementById('menuPreview');
+		var dragging = null;
+
+		function refresh() {
+			var items = list.querySelectorAll('li');
+			preview.innerHTML = '';
+			items.forEach(function (li, i) {
+				li.querySelector('.menu-no').textContent = i + 1;
+				li.querySelector('[data-move="-1"]').disabled = i === 0;
+				li.querySelector('[data-move="1"]').disabled = i === items.length - 1;
+				var a = document.createElement('a');
+				a.textContent = li.querySelector('strong').textContent;
+				preview.appendChild(a);
+			});
+		}
+
+		list.addEventListener('click', function (e) {
+			var btn = e.target.closest('[data-move]');
+			if (!btn) return;
+			var li = btn.closest('li');
+			if (btn.dataset.move === '-1' && li.previousElementSibling) {
+				list.insertBefore(li, li.previousElementSibling);
+			} else if (btn.dataset.move === '1' && li.nextElementSibling) {
+				list.insertBefore(li.nextElementSibling, li);
+			}
+			refresh();
+			btn.disabled || btn.focus();
+		});
+
+		list.addEventListener('dragstart', function (e) {
+			dragging = e.target.closest('li');
+			dragging.classList.add('dragging');
+			e.dataTransfer.effectAllowed = 'move';
+			e.dataTransfer.setData('text/plain', dragging.dataset.menu);
+		});
+		list.addEventListener('dragover', function (e) {
+			if (!dragging) return;
+			e.preventDefault();
+			var over = e.target.closest('li');
+			if (!over || over === dragging) return;
+			var rect = over.getBoundingClientRect();
+			var after = e.clientY > rect.top + rect.height / 2;
+			list.insertBefore(dragging, after ? over.nextElementSibling : over);
+		});
+		list.addEventListener('dragend', function () {
+			if (dragging) dragging.classList.remove('dragging');
+			dragging = null;
+			refresh();
+		});
+
+		refresh();
+	})();
+</script>
+</body>
+</html>

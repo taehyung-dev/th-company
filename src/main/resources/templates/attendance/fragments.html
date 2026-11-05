@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- 근태관리 좌측 메뉴: 내 근태 | 전체 근태 현황(근태관리자) -->
+<nav th:fragment="nav" class="board-tree approval-nav attend-nav">
+	<a th:href="@{/attendance}" th:classappend="${menu == 'my'} ? 'active'"><span>내 근태</span></a>
+	<a th:href="@{/attendance/leave}" th:classappend="${menu == 'leave'} ? 'active'"><span>내 휴가</span></a>
+	<th:block th:if="${can.attendance}">
+		<div class="board-tree-folder">근태관리자</div>
+		<a th:href="@{/attendance/manage}" th:classappend="${menu == 'manage'} ? 'active'"><span>전체 근태 현황</span></a>
+		<a th:href="@{/attendance/manage/leave}" th:classappend="${menu == 'leave-manage'} ? 'active'"><span>전체 휴가 현황</span></a>
+		<a th:href="@{/attendance/manage/holidays}" th:classappend="${menu == 'holidays'} ? 'active'"><span>공휴일 관리</span></a>
+	</th:block>
+	<p class="attend-rule" th:if="${workStart != null}">
+		근무시간 <strong th:text="${#temporals.format(workStart, 'HH:mm')} + ' ~ ' + ${#temporals.format(workEnd, 'HH:mm')}">09:00 ~ 18:00</strong><br>
+		오전 6시 이후 첫 로그인이 출근, [퇴근] 버튼이 퇴근입니다.
+	</p>
+</nav>
+
+<!-- 상태 꼬리표 (지각, 조퇴, 결근 ...) -->
+<th:block th:fragment="tags(day)">
+	<span th:each="t : ${day.tags()}" class="tag" th:classappend="${t.css}" th:text="${t.text}">정상</span>
+	<span th:if="${day.corrected}" class="tag tag-muted"
+	      th:title="${day.correctedBy} + ' 정정: ' + ${day.correctionNote}">정정</span>
+</th:block>
+
+</body>
+</html>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('전체 휴가 현황')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar('attendance')}"></header>
+<div class="layout">
+	<main class="content">
+		<div class="board-layout">
+			<nav th:replace="~{attendance/fragments :: nav}"></nav>
+
+			<section class="board-main">
+				<div class="board-head">
+					<div>
+						<h2>전체 휴가 현황</h2>
+						<p class="board-desc">연차 칸을 비우고 저장하면 입사일 기준 일수로 되돌아갑니다.</p>
+					</div>
+				</div>
+
+				<div class="alert alert-info" th:if="${message}" th:text="${message}"></div>
+				<div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
+
+				<div class="month-nav">
+					<a class="btn-secondary" th:href="@{/attendance/manage/leave(year=${year - 1})}">‹ 이전 해</a>
+					<strong th:text="${year} + '년'">2026년</strong>
+					<a class="btn-secondary" th:href="@{/attendance/manage/leave(year=${year + 1})}">다음 해 ›</a>
+				</div>
+
+				<h3 class="res-section">직원별 연차</h3>
+				<div class="board-panel">
+					<table class="post-table leave-table">
+						<thead>
+						<tr>
+							<th class="col-type">이름</th><th class="col-title">부서</th><th class="col-period">입사일</th>
+							<th class="col-grant">연차</th><th class="col-days">사용</th><th class="col-days">결재 중</th><th class="col-days">남음</th>
+						</tr>
+						</thead>
+						<tbody>
+						<tr th:each="m : ${members}">
+							<td class="col-type">
+								<a th:href="@{/attendance/manage/members/{id}(id=${m.memberId})}" th:text="${m.name}">홍길동</a>
+							</td>
+							<td class="col-title" th:text="${m.deptName}">개발1팀</td>
+							<td class="col-period" th:text="${m.displayHireDate()}">2020.03.02</td>
+							<td class="col-grant">
+								<form class="grant-form" th:action="@{/attendance/manage/leave/grant}" method="post">
+									<input type="hidden" name="member" th:value="${m.memberId}">
+									<input type="hidden" name="year" th:value="${year}">
+									<input type="number" name="days" min="0" max="100" step="0.5" aria-label="연차 일수"
+									       th:value="${m.summary.custom} ? ${m.summary.displayGranted()} : ''"
+									       th:placeholder="${m.summary.displayGranted()}">
+									<button type="submit" class="btn-link">저장</button>
+								</form>
+							</td>
+							<td class="col-days" th:text="${m.summary.displayUsed()}">0</td>
+							<td class="col-days" th:text="${m.summary.displayPending()}">0</td>
+							<td class="col-days" th:text="${m.summary.displayRemaining()}">15</td>
+						</tr>
+						<tr th:if="${#lists.isEmpty(members)}">
+							<td colspan="7" class="empty">재직자가 없습니다.</td>
+						</tr>
+						</tbody>
+					</table>
+				</div>
+
+				<h3 class="res-section">휴가 신청</h3>
+				<div class="board-panel">
+					<table class="post-table leave-table">
+						<thead>
+						<tr>
+							<th class="col-type">이름</th><th class="col-type">종류</th><th class="col-period">기간</th>
+							<th class="col-days">일수</th><th class="col-title">사유</th><th class="col-state">상태</th><th class="col-act"></th>
+						</tr>
+						</thead>
+						<tbody>
+						<tr th:each="r : ${requests}">
+							<td class="col-type" th:text="${r.memberName}">홍길동</td>
+							<td class="col-type" th:text="${r.type.label}">연차</td>
+							<td class="col-period" th:text="${r.period()}">2026.11.10</td>
+							<td class="col-days" th:text="${r.displayDays()}">1일</td>
+							<td class="col-title" th:text="${r.reason} ?: '-'">사유</td>
+							<td class="col-state"><span class="tag" th:classappend="${r.status.css}" th:text="${r.status.label}">승인</span></td>
+							<td class="col-act">
+								<form th:if="${r.canCancel}" th:action="@{/attendance/manage/leave/{id}/cancel(id=${r.id})}" method="post"
+								      th:attr="data-confirm=${r.memberName} + ' 님의 휴가를 취소할까요?'" onsubmit="return confirm(this.dataset.confirm)">
+									<input type="hidden" name="year" th:value="${year}">
+									<button type="submit" class="btn-link danger">취소</button>
+								</form>
+							</td>
+						</tr>
+						<tr th:if="${#lists.isEmpty(requests)}">
+							<td colspan="7" class="empty">이 해의 휴가 신청이 없습니다.</td>
+						</tr>
+						</tbody>
+					</table>
+				</div>
+			</section>
+		</div>
+	</main>
+</div>
+</body>
+</html>

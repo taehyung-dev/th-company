@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('정보 수정')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar('my')}"></header>
+<div class="layout">
+	<main class="content">
+		<div class="board-layout">
+			<nav th:replace="~{my/fragments :: nav}"></nav>
+
+			<section class="board-main">
+				<div class="board-head">
+					<div>
+						<h2>정보 수정</h2>
+						<p class="board-desc">프로필 사진, 이메일, 연락처, 주소를 바꿀 수 있습니다.</p>
+					</div>
+				</div>
+
+				<div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
+
+				<form class="board-panel post-form" th:action="@{/my/edit}" th:object="${form}" method="post"
+				      enctype="multipart/form-data">
+					<div class="my-photo-field">
+						<div class="my-avatar" id="photoPreview">
+							<img th:if="${profile.photoUrl}" th:src="@{${profile.photoUrl}}" alt="프로필 사진">
+							<span th:unless="${profile.photoUrl}" th:text="${profile.initial()}">김</span>
+						</div>
+						<div class="my-photo-controls">
+							<label for="photo">프로필 사진</label>
+							<input type="file" id="photo" name="photo" accept="image/jpeg,image/png,image/gif,image/bmp">
+							<label class="check" th:if="${profile.photoUrl}">
+								<input type="checkbox" name="removePhoto" value="true" id="removePhoto"> 사진 삭제
+							</label>
+							<p class="hint-inline">JPG, PNG, GIF, BMP · 5MB 이하. 가운데를 기준으로 정사각형으로 잘라 저장합니다.</p>
+						</div>
+					</div>
+
+					<div class="contact-grid">
+						<div>
+							<label>이름</label>
+							<input type="text" th:value="${profile.name}" disabled>
+						</div>
+						<div>
+							<label>부서</label>
+							<input type="text" th:value="${profile.departmentName} ?: '-'" disabled>
+						</div>
+						<div>
+							<label for="email">이메일</label>
+							<input type="email" th:field="*{email}" maxlength="100">
+							<p class="field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></p>
+						</div>
+						<div>
+							<label for="phone">연락처</label>
+							<input type="tel" th:field="*{phone}" maxlength="30" placeholder="010-0000-0000">
+							<p class="field-error" th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}"></p>
+						</div>
+						<div th:replace="~{fragments/address :: fields}"></div>
+					</div>
+
+					<div class="form-buttons">
+						<a class="btn-secondary" th:href="@{/my}">취소</a>
+						<button type="submit" class="btn-primary">저장</button>
+					</div>
+				</form>
+			</section>
+		</div>
+	</main>
+</div>
+<script>
+	// 고른 사진을 저장 전에 미리 보여준다 (서버에서는 가운데 정사각형으로 잘라 저장)
+	(function () {
+		var input = document.getElementById('photo');
+		var preview = document.getElementById('photoPreview');
+		var remove = document.getElementById('removePhoto');
+		var original = preview.innerHTML;
+		input.addEventListener('change', function () {
+			var file = input.files[0];
+			if (!file) { preview.innerHTML = original; return; }
+			var img = document.createElement('img');
+			img.alt = '새 프로필 사진';
+			img.src = URL.createObjectURL(file);
+			preview.replaceChildren(img);
+			if (remove) remove.checked = false;
+		});
+		if (remove) {
+			remove.addEventListener('change', function () { preview.classList.toggle('removing', remove.checked); });
+		}
+	})();
+</script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('일정')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar('schedule')}"></header>
+<div class="layout">
+	<main class="content">
+		<div class="alert alert-info" th:if="${message}" th:text="${message}"></div>
+
+		<div class="cal-head">
+			<div class="cal-nav">
+				<a class="btn-secondary" th:href="@{/schedule(ym=${view.previous()})}" title="이전 달">‹</a>
+				<h2 th:text="${view.title()}">2026년 10월</h2>
+				<a class="btn-secondary" th:href="@{/schedule(ym=${view.next()})}" title="다음 달">›</a>
+				<a class="btn-secondary" th:href="@{/schedule(ym=${thisMonth})}">오늘</a>
+			</div>
+			<div class="cal-legend">
+				<label th:each="t : ${types}" class="legend-item" th:classappend="'sch-' + ${t.css}">
+					<input type="checkbox" checked th:attr="data-type=${t.css}">
+					<span class="legend-dot"></span>
+					<span th:text="${t.label}">회사일정</span>
+				</label>
+				<a class="btn-primary" th:href="@{/schedule/new}">일정 등록</a>
+			</div>
+		</div>
+
+		<table class="calendar">
+			<thead>
+			<tr>
+				<th class="sun">일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th class="sat">토</th>
+			</tr>
+			</thead>
+			<tbody>
+			<tr th:each="week : ${view.weeks}">
+				<td th:each="day : ${week}"
+				    th:classappend="${!day.inMonth ? 'other-month ' : ''} + ${day.today ? 'today ' : ''} + ${day.sunday or day.holiday != null ? 'sun ' : ''} + ${day.saturday and day.holiday == null ? 'sat' : ''}">
+					<a class="cal-date" th:href="@{/schedule/new(date=${day.date})}" title="이 날짜에 일정 등록"
+					   th:text="${day.date.dayOfMonth}">1</a>
+					<span class="cal-holiday" th:if="${day.holiday}" th:text="${day.holiday}">신정</span>
+					<a th:each="i : ${day.items}" class="sch-item"
+					   th:classappend="'sch-' + ${i.type.css} + (${i.allDay or i.continued} ? ' sch-bar' : '')"
+					   th:href="@{/schedule/{id}(id=${i.id})}" th:title="${i.title}">
+						<span class="sch-time" th:if="${!#strings.isEmpty(i.timeLabel)}" th:text="${i.timeLabel}">09:00</span>
+						<span th:text="${i.title}">회의</span>
+					</a>
+				</td>
+			</tr>
+			</tbody>
+		</table>
+	</main>
+</div>
+<script>
+	// 종류별 보기/숨기기 (이 브라우저에 기억)
+	(function () {
+		var KEY = 'schedule.hidden';
+		var hidden = [];
+		try { hidden = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { hidden = []; }
+
+		document.querySelectorAll('.cal-legend input[data-type]').forEach(function (box) {
+			var type = box.dataset.type;
+			box.checked = hidden.indexOf(type) < 0;
+			document.body.classList.toggle('hide-' + type, !box.checked);
+			box.addEventListener('change', function () {
+				document.body.classList.toggle('hide-' + type, !box.checked);
+				hidden = Array.prototype.filter.call(document.querySelectorAll('.cal-legend input[data-type]'),
+					function (b) { return !b.checked; }).map(function (b) { return b.dataset.type; });
+				try { localStorage.setItem(KEY, JSON.stringify(hidden)); } catch (e) { /* 저장 불가 시 무시 */ }
+			});
+		});
+	})();
+</script>
+</body>
+</html>

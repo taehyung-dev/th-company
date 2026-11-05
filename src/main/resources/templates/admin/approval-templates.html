@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments :: head('결재 양식 관리')}"></head>
+<body>
+<header th:replace="~{admin/fragments :: header}"></header>
+<div class="layout">
+	<nav th:replace="~{admin/fragments :: sidebar}"></nav>
+
+	<main class="content">
+		<div class="content-head">
+			<h2>결재 양식 관리</h2>
+			<span class="today">기안할 때 고르는 양식입니다. 입력 항목과 본문 서식을 정할 수 있습니다.</span>
+			<a class="btn-primary head-action" th:href="@{/admin/approval-templates/new}">양식 만들기</a>
+		</div>
+		<th:block th:replace="~{admin/fragments :: alerts}"></th:block>
+
+		<section class="panel table-wrap">
+			<table class="table">
+				<thead>
+				<tr>
+					<th class="num">순서</th><th>양식</th><th>문서번호</th><th class="num">입력 항목</th>
+					<th class="num">문서</th><th>상태</th><th></th>
+				</tr>
+				</thead>
+				<tbody>
+				<tr th:each="t : ${templates}" th:classappend="${!t.enabled} ? 'row-disabled'">
+					<td class="num" th:text="${t.sortOrder}">10</td>
+					<td>
+						<a th:href="@{/admin/approval-templates/{id}(id=${t.id})}"><strong th:text="${t.name}">품의서</strong></a>
+						<div class="sub" th:if="${t.description}" th:text="${t.description}">설명</div>
+					</td>
+					<td><code th:text="${t.code} + '-연도-번호'">품의-연도-번호</code></td>
+					<td class="num" th:text="${t.fieldCount}">0</td>
+					<td class="num" th:text="${t.documentCount}">0</td>
+					<td><span class="tag" th:classappend="${t.enabled} ? 'tag-on' : 'tag-off'"
+					          th:text="${t.enabled} ? '사용' : '사용 안 함'">사용</span></td>
+					<td class="actions">
+						<a th:href="@{/admin/approval-templates/{id}(id=${t.id})}">수정</a>
+					</td>
+				</tr>
+				<tr th:if="${#lists.isEmpty(templates)}">
+					<td colspan="7" class="empty">등록된 양식이 없습니다.</td>
+				</tr>
+				</tbody>
+			</table>
+		</section>
+	</main>
+</div>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('내 휴가')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: topbar('attendance')}"></header>
+<div class="layout">
+	<main class="content">
+		<div class="board-layout">
+			<nav th:replace="~{attendance/fragments :: nav}"></nav>
+
+			<section class="board-main">
+				<div class="board-head">
+					<div>
+						<h2>내 휴가</h2>
+						<p class="board-desc">신청하면 휴가신청서가 전자결재로 올라가고, 최종 승인되면 확정됩니다.</p>
+					</div>
+					<a class="btn-primary" th:href="@{/attendance/leave/new}">휴가 신청</a>
+				</div>
+
+				<div class="alert alert-info" th:if="${message}" th:text="${message}"></div>
+				<div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
+
+				<div class="month-nav">
+					<a class="btn-secondary" th:href="@{/attendance/leave(year=${year - 1})}">‹ 이전 해</a>
+					<strong th:text="${year} + '년'">2026년</strong>
+					<a class="btn-secondary" th:href="@{/attendance/leave(year=${year + 1})}">다음 해 ›</a>
+				</div>
+
+				<div class="attend-summary">
+					<div><span>연차</span><strong th:text="${summary.displayGranted()} + '일'">15일</strong></div>
+					<div><span>사용</span><strong th:text="${summary.displayUsed()} + '일'">0일</strong></div>
+					<div><span>결재 중</span><strong th:text="${summary.displayPending()} + '일'">0일</strong></div>
+					<div><span>남은 연차</span><strong th:text="${summary.displayRemaining()} + '일'">15일</strong></div>
+				</div>
+
+				<div class="board-panel">
+					<table class="post-table leave-table">
+						<thead>
+						<tr>
+							<th class="col-type">종류</th><th class="col-period">기간</th><th class="col-days">일수</th>
+							<th class="col-title">사유</th><th class="col-state">상태</th><th class="col-act"></th>
+						</tr>
+						</thead>
+						<tbody>
+						<tr th:each="r : ${requests}">
+							<td class="col-type" th:text="${r.type.label}">연차</td>
+							<td class="col-period" th:text="${r.period()}">2026.11.10</td>
+							<td class="col-days" th:text="${r.displayDays()}">1일</td>
+							<td class="col-title" th:text="${r.reason} ?: '-'">사유</td>
+							<td class="col-state">
+								<a th:if="${r.documentId != null}" th:href="@{/approval/docs/{id}(id=${r.documentId})}" title="휴가신청서 보기">
+									<span class="tag" th:classappend="${r.status.css}" th:text="${r.status.label}">승인</span>
+								</a>
+							</td>
+							<td class="col-act">
+								<form th:if="${r.canCancel}" th:action="@{/attendance/leave/{id}/cancel(id=${r.id})}" method="post"
+								      onsubmit="return confirm('이 휴가를 취소할까요?')">
+									<input type="hidden" name="year" th:value="${year}">
+									<button type="submit" class="btn-link danger">취소</button>
+								</form>
+							</td>
+						</tr>
+						<tr th:if="${#lists.isEmpty(requests)}">
+							<td colspan="6" class="empty">이 해의 휴가 신청이 없습니다.</td>
+						</tr>
+						</tbody>
+					</table>
+				</div>
+			</section>
+		</div>
+	</main>
+</div>
+</body>
+</html>

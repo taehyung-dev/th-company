@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- 전자결재 좌측 메뉴: 결재하기 + 문서함 -->
+<nav th:fragment="nav" class="board-tree approval-nav">
+	<a class="btn-primary approval-new" th:href="@{/approval/new}">결재하기</a>
+	<a th:each="b : ${boxes}" th:href="@{/approval/box/{p}(p=${b.path})}"
+	   th:classappend="${menu == b.path} ? 'active'">
+		<span th:text="${b.label}">미결문서</span>
+		<span class="nav-count" th:if="${counts[b.path] != null and counts[b.path] > 0}"
+		      th:classappend="${b.name() == 'PENDING'} ? 'nav-count-strong'" th:text="${counts[b.path]}">0</span>
+	</a>
+	<a th:href="@{/approval/delegation}" th:classappend="${menu == 'delegation'} ? 'active'"><span>대결 설정</span></a>
+</nav>
+
+<!-- 문서 상태 배지 -->
+<span th:fragment="status(s)" class="doc-status" th:classappend="'doc-' + ${#strings.toLowerCase(s.name())}"
+      th:text="${s.label}">진행중</span>
+
+<!-- 작성 중 문서의 결재란. 결재자 칸은 line-picker.js 의 renderLineStamp 가 채운다 -->
+<table th:fragment="draftStamp(stampId)" class="stamp-table" th:id="${stampId}">
+	<tr><th rowspan="3" class="stamp-label">결<br>재</th><td class="stamp-grade">기안</td></tr>
+	<tr><td class="stamp-box"><span class="stamp-name" th:text="${drafter.name}">홍길동</span></td></tr>
+	<tr><td class="stamp-date"></td></tr>
+</table>
+
+<!-- 결재선·참조자 지정 팝업: 조직도에서 오른쪽 목록으로 끌어다 놓고 [확인]. 동작은 /js/line-picker.js -->
+<dialog th:fragment="picker" id="linePicker" class="preview-dialog line-dialog">
+	<div class="preview-bar">
+		<strong id="pickTitle">결재선 지정</strong>
+		<span class="hint-inline">이름을 오른쪽 목록으로 끌어다 놓거나 두 번 누르세요.</span>
+		<button type="button" class="btn-secondary" data-close>닫기</button>
+	</div>
+	<div class="picker-body">
+		<section class="picker-pane">
+			<div class="picker-pane-head">
+				<strong>조직도</strong>
+				<input type="search" id="orgSearch" placeholder="이름 검색">
+			</div>
+			<ul class="org-pick" id="orgPick">
+				<th:block th:each="g : ${approverGroups}">
+					<li class="pick-dept" th:attr="data-depth=${g.depth}"
+					    th:style="'padding-left:' + ${8 + g.depth * 16} + 'px'">
+						<button type="button" class="pick-toggle" aria-label="펼치기/접기">▾</button>
+						<span th:text="${g.departmentName}">개발본부</span>
+					</li>
+					<li class="pick-member" th:each="o : ${g.members}"
+					    th:attr="data-depth=${g.depth + 1},data-id=${o.id},data-name=${o.name},data-grade=${o.grade},data-label=${o.label}"
+					    th:style="'padding-left:' + ${30 + g.depth * 16} + 'px'" tabindex="0" draggable="true">
+						<span class="pick-name" th:text="${o.name}">홍길동</span>
+						<span class="pick-grade" th:text="${o.grade}">과장</span>
+					</li>
+				</th:block>
+			</ul>
+		</section>
+
+		<div class="picker-arrows">
+			<button type="button" class="btn-secondary" id="pickAdd">추가 ▶</button>
+			<button type="button" class="btn-secondary" id="pickRemove">◀ 빼기</button>
+		</div>
+
+		<section class="picker-pane">
+			<div class="picker-pane-head">
+				<strong id="pickPaneTitle">결재선</strong>
+				<span class="hint-inline" id="pickCount">0명</span>
+			</div>
+			<ol class="pick-line" id="pickLine"></ol>
+			<p class="pick-empty hint-inline" id="pickEmpty">왼쪽 조직도에서 사람을 끌어다 놓으세요.</p>
+			<p class="pick-empty hint-inline" id="pickOrderHint">맨 아래 사람부터 결재하고, 맨 위가 최종 결재자입니다. 끌어서 순서를 바꿀 수 있습니다.</p>
+			<div class="pick-order" id="pickOrder">
+				<button type="button" class="btn-secondary" id="pickUp">▲ 위로</button>
+				<button type="button" class="btn-secondary" id="pickDown">▼ 아래로</button>
+			</div>
+		</section>
+	</div>
+	<div class="picker-foot">
+		<button type="button" class="btn-secondary" data-close>취소</button>
+		<button type="button" class="btn-primary" id="pickConfirm">확인</button>
+	</div>
+</dialog>
+
+</body>
+</html>
