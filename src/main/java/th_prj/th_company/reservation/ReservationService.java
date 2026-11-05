@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
@@ -26,6 +27,7 @@ import th_prj.th_company.file.FileOwner;
 import th_prj.th_company.holiday.HolidayService;
 import th_prj.th_company.member.Member;
 import th_prj.th_company.member.MemberRepository;
+import th_prj.th_company.member.MemberSelection;
 import th_prj.th_company.notification.NotificationService;
 import th_prj.th_company.reservation.ReservationViews.Block;
 import th_prj.th_company.reservation.ReservationViews.DayBoard;
@@ -43,6 +45,7 @@ import th_prj.th_company.reservation.ReservationViews.Taken;
  *   <li>회의실은 새로 예약할 때 반복할 수 있다 (최대 1년). 날짜마다 예약이 하나씩 만들어져 따로 고치거나 취소할 수 있다</li>
  *   <li>수정·취소: 예약자 본인, 또는 관리자와 그 구분의 관리 권한자(회의실관리자, 자원관리자). 끝난 예약은 관리자만</li>
  *   <li>사용 안 함 자원은 새 예약을 받지 않는다</li>
+ *   <li>회의실 예약에는 참석자를 넣을 수 있다. 참석자는 지정·제외·시간 변경·취소 때 알림을 받고, 내 예약에서 그 예약을 본다</li>
  * </ul>
  */
 @Service
@@ -56,6 +59,7 @@ public class ReservationService {
 	/** 지난 예약은 이 기간만 내 예약에 보인다 */
 	private static final int PAST_DAYS = 30;
 	private static final int MAX_RESOURCE_DAYS = 90;
+	public static final int MAX_ATTENDEES = 50;
 
 	private final ReservationRepository reservationRepository;
 	private final ResourceRepository resourceRepository;
@@ -64,11 +68,13 @@ public class ReservationService {
 	private final HolidayService holidayService;
 	private final FileAttachmentService fileService;
 	private final NotificationService notificationService;
+	private final MemberSelection memberSelection;
 	private final Clock clock;
 
 	public ReservationService(ReservationRepository reservationRepository, ResourceRepository resourceRepository,
 			MemberRepository memberRepository, ReservationSeriesRepository seriesRepository, HolidayService holidayService,
-			FileAttachmentService fileService, NotificationService notificationService, Clock clock) {
+			FileAttachmentService fileService, NotificationService notificationService, MemberSelection memberSelection,
+			Clock clock) {
 		this.reservationRepository = reservationRepository;
 		this.resourceRepository = resourceRepository;
 		this.memberRepository = memberRepository;
@@ -76,6 +82,7 @@ public class ReservationService {
 		this.holidayService = holidayService;
 		this.fileService = fileService;
 		this.notificationService = notificationService;
+		this.memberSelection = memberSelection;
 		this.clock = clock;
 	}
 
@@ -255,6 +262,7 @@ public class ReservationService {
 		form.setStartTime(r.getStartAt().toLocalTime());
 		form.setEndTime(r.getEndAt().toLocalTime());
 		form.setMemo(r.getMemo());
+		form.setAttendeeIds(r.getAttendees().stream().map(Member::getId).toList());
 		return form;
 	}
 
@@ -304,9 +312,12 @@ public class ReservationService {
 		}
 		String title = form.getTitle().trim();
 		String memo = form.getMemo() == null || form.getMemo().isBlank() ? null : form.getMemo().trim();
+		// 참석자는 회의실 예약에만 있다. 예약자는 참석자로 넣지 않는다
+		List<Member> attendees = form.getKind() != ReservationKind.ROOM ? List.of()
+			: memberSelection.resolve(form.getAttendeeIds(), r.getOwner(), r.getAttendees(), MAX_ATTENDEES, "참석자");
 		if (r.getId() == null && form.getKind() == ReservationKind.ROOM && form.getRepeat() != null
 				&& form.getRepeat() != RepeatRule.NONE) {
-			return saveSeries(form, me, resource, title, memo, startTime, endTime, uploads);
+			return saveSeries(form, me, resource, title, memo, startTime, endTime, attendees, uploads);
 		}
 		List<Reservation> conflicts = reservationRepository.findConflicts(resource.getId(), start, end,
 			r.getId() == null ? 0L : r.getId());
@@ -317,18 +328,22 @@ public class ReservationService {
 				+ " 님의 예약(" + c.getTitle() + ")과 시간이 겹칩니다.");
 		}
 
+		Set<Member> before = r.getAttendees();
+		boolean moved = r.getId() != null && (!sameResource || !start.equals(r.getStartAt()) || !end.equals(r.getEndAt()));
 		r.update(resource, title, start, end, memo);
+		r.changeAttendees(attendees);
 		Long id = reservationRepository.save(r).getId();
 		fileService.sync(FileOwner.RESERVATION, id, uploads, form.getDeleteFileIds());
 		if (!r.getOwner().getId().equals(me.getId())) {
 			notifyOwner(r, me, "수정");
 		}
+		notifyAttendees(r, before, attendees, moved, me);
 		return new Saved(id, 1, 0);
 	}
 
 	/** 반복 예약: 날짜마다 예약을 만든다. 첨부파일은 묶음에 달아 모든 날짜에서 보이게 한다 */
 	private Saved saveSeries(ReservationForm form, Member me, Resource resource, String title, String memo,
-			LocalTime startTime, LocalTime endTime, List<MultipartFile> uploads) {
+			LocalTime startTime, LocalTime endTime, List<Member> attendees, List<MultipartFile> uploads) {
 		LocalDate first = form.getDate();
 		LocalDate until = form.getRepeatUntil();
 		if (until == null) {
@@ -362,16 +377,22 @@ public class ReservationService {
 			throw new BusinessException("예약할 수 있는 날이 없습니다.");
 		}
 		ReservationSeries series = seriesRepository.save(new ReservationSeries(form.getRepeat(), until));
-		Long firstId = null;
+		Reservation created = null;
 		for (LocalDate d : dates) {
 			Reservation r = new Reservation(me);
 			r.update(resource, title, d.atTime(startTime), d.atTime(endTime), memo);
+			r.changeAttendees(attendees);
 			r.joinSeries(series);
-			Long id = reservationRepository.save(r).getId();
-			firstId = firstId == null ? id : firstId;
+			reservationRepository.save(r);
+			created = created == null ? r : created;
 		}
 		fileService.sync(FileOwner.RESERVATION_SERIES, series.getId(), uploads, List.of());
-		return new Saved(firstId, dates.size(), conflicts.size());
+		// 날짜마다 알리지 않고 한 번만 알린다
+		String times = dates.size() > 1 ? " 반복 예약 " + dates.size() + "건에 모두 참석합니다." : "";
+		for (Member m : attendees) {
+			sendToAttendee(m, me, created, "의 참석자로 지정했습니다." + times, true);
+		}
+		return new Saved(created.getId(), dates.size(), conflicts.size());
 	}
 
 	@Transactional
@@ -398,6 +419,11 @@ public class ReservationService {
 		if (!first.getOwner().getId().equals(me.getId())) {
 			notifyOwner(first, me, "취소");
 		}
+		Map<Long, Member> attendees = new LinkedHashMap<>();
+		targets.forEach(r -> r.getAttendees().forEach(m -> attendees.put(m.getId(), m)));
+		attendees.remove(me.getId());
+		String times = targets.size() > 1 ? " 반복 예약 " + targets.size() + "건이 함께 취소되었습니다." : "";
+		attendees.values().forEach(m -> sendToAttendee(m, me, first, "을 취소했습니다." + times, false));
 		for (Reservation r : targets) {
 			fileService.deleteAll(FileOwner.RESERVATION, r.getId());
 		}
@@ -415,6 +441,36 @@ public class ReservationService {
 		notificationService.send(r.getOwner(), "예약", by.getName() + " 님이 '" + r.getTitle() + "' " + kind.getLabel() + " 예약("
 			+ ReservationViews.displayDate(r.getStartAt().toLocalDate()) + ")을 " + action + "했습니다.",
 			"/reservations/" + kind.getPath() + "/my");
+	}
+
+	/** 수정 후 알림: 새 참석자, 빠진 참석자, 시간이나 회의실이 바뀌었으면 남은 참석자 */
+	private void notifyAttendees(Reservation r, Set<Member> before, List<Member> after, boolean moved, Member by) {
+		Set<Long> beforeIds = before.stream().map(Member::getId).collect(Collectors.toSet());
+		Set<Long> afterIds = after.stream().map(Member::getId).collect(Collectors.toSet());
+		for (Member m : after) {
+			if (m.getId().equals(by.getId())) {
+				continue;
+			}
+			if (!beforeIds.contains(m.getId())) {
+				sendToAttendee(m, by, r, "의 참석자로 지정했습니다.", true);
+			} else if (moved) {
+				sendToAttendee(m, by, r, "의 시간 또는 장소를 변경했습니다.", true);
+			}
+		}
+		for (Member m : before) {
+			if (!afterIds.contains(m.getId()) && !m.getId().equals(by.getId())) {
+				sendToAttendee(m, by, r, "의 참석자에서 제외했습니다.", false);
+			}
+		}
+	}
+
+	/** @param openDetail 예약 상세로 연결할지 (취소·제외면 내 예약 목록으로) */
+	private void sendToAttendee(Member to, Member by, Reservation r, String action, boolean openDetail) {
+		ReservationKind kind = ReservationKind.of(r.getResource());
+		notificationService.send(to, "예약", by.getName() + " 님이 '" + r.getTitle() + "' " + kind.getLabel() + " 예약("
+			+ r.getResource().getName() + ", " + ReservationViews.displayDate(r.getStartAt().toLocalDate()) + " "
+			+ ReservationViews.period(r.getStartAt(), r.getEndAt()) + ")" + action,
+			openDetail ? "/reservations/" + r.getId() : "/reservations/" + kind.getPath() + "/my");
 	}
 
 	// ---------- 내부 ----------
@@ -442,7 +498,8 @@ public class ReservationService {
 			owner.getName(), deptName(owner), r.getStartAt(), r.getEndAt(), r.getMemo(), editable, ended,
 			r.getSeries() == null ? null : r.getSeries().getId(),
 			r.getSeries() == null ? null : r.getSeries().getRule(),
-			r.getSeries() == null ? null : r.getSeries().getUntilDate());
+			r.getSeries() == null ? null : r.getSeries().getUntilDate(),
+			MemberSelection.displayNames(r.getAttendees()), r.hasAttendee(me.getId()));
 	}
 
 	private static String deptName(Member m) {

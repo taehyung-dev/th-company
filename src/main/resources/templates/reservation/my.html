@@ -37,14 +37,19 @@
 								<th:block th:if="${kind.hasSubTypes()}"><th:block th:replace="~{reservation/fragments :: type(${r.resourceType})}"></th:block></th:block>
 								<span th:text="${r.resourceName}">대회의실</span>
 							</td>
-							<td class="col-title"><a th:href="@{/reservations/{id}(id=${r.id})}" th:text="${r.title}">주간 회의</a></td>
+							<td class="col-title">
+								<a th:href="@{/reservations/{id}(id=${r.id})}" th:text="${r.title}">주간 회의</a>
+								<span class="tag tag-info" th:if="${r.attending}" th:text="'참석 · ' + ${r.ownerName}">참석</span>
+							</td>
 							<td class="col-act">
+								<th:block th:if="${r.editable}">
 								<a class="btn-link" th:href="@{/reservations/{id}/edit(id=${r.id})}">수정</a>
 								<form th:action="@{/reservations/{id}/delete(id=${r.id})}" method="post"
 								      onsubmit="return confirm('이 예약을 취소할까요?')">
 									<input type="hidden" name="back" value="my">
 									<button type="submit" class="btn-link danger">취소</button>
 								</form>
+								</th:block>
 							</td>
 						</tr>
 						<tr th:if="${#lists.isEmpty(upcoming)}">
@@ -73,7 +78,10 @@
 								<th:block th:if="${kind.hasSubTypes()}"><th:block th:replace="~{reservation/fragments :: type(${r.resourceType})}"></th:block></th:block>
 								<span th:text="${r.resourceName}">대회의실</span>
 							</td>
-							<td class="col-title"><a th:href="@{/reservations/{id}(id=${r.id})}" th:text="${r.title}">주간 회의</a></td>
+							<td class="col-title">
+								<a th:href="@{/reservations/{id}(id=${r.id})}" th:text="${r.title}">주간 회의</a>
+								<span class="tag tag-info" th:if="${r.attending}" th:text="'참석 · ' + ${r.ownerName}">참석</span>
+							</td>
 						</tr>
 						<tr th:if="${#lists.isEmpty(past)}">
 							<td colspan="4" class="empty">지난 예약이 없습니다.</td>

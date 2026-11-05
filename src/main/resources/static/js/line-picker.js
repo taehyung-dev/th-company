@@ -1,6 +1,7 @@
 // 결재선·참조자 지정 팝업 (approval/fragments :: picker).
 // [data-picker] 버튼마다 대상 목록이 다르다: data-list(목록 id), data-empty(안내 id), data-input(hidden 이름),
-// data-max, data-title, data-ordered(결재 순서가 있는지), data-stamp(결재란 표 id, 선택).
+// data-max, data-title, data-ordered(결재 순서가 있는지), data-stamp(결재란 표 id, 선택),
+// data-pane(오른쪽 목록 이름, 선택), data-tag(사람 앞에 붙는 표시, 선택).
 // 열 때 대상 목록을 복사해 오고, [확인]하면 대상 목록을 다시 만든다. [취소]는 변경을 버린다.
 // 대상 목록과 hidden 값은 결재 순서(1차가 처음)이고, 팝업의 오른쪽 목록만 높은 사람이 위로 가도록 거꾸로 보여 준다.
 
@@ -131,7 +132,7 @@ function renderLineStamp(table, list) {
 		document.getElementById('pickEmpty').style.display = line.children.length ? 'none' : '';
 		var count = line.children.length;
 		Array.prototype.forEach.call(line.children, function (li, i) {
-			li.dataset.step = target.ordered ? (count - i) + '차' : '참조';
+			li.dataset.step = target.ordered ? (count - i) + '차' : target.tag;
 		});
 		refreshOrg();
 	}
@@ -292,10 +293,10 @@ function renderLineStamp(table, list) {
 		button.addEventListener('click', function () {
 			target = {
 				list: list, empty: empty, input: button.dataset.input, max: parseInt(button.dataset.max, 10),
-				ordered: button.dataset.ordered === 'true', stamp: stamp
+				ordered: button.dataset.ordered === 'true', stamp: stamp, tag: button.dataset.tag || '참조'
 			};
 			title.textContent = button.dataset.title;
-			paneTitle.textContent = target.ordered ? '결재선' : '참조자';
+			paneTitle.textContent = target.ordered ? '결재선' : button.dataset.pane || '참조자';
 			order.style.display = target.ordered ? '' : 'none';
 			document.getElementById('pickOrderHint').style.display = target.ordered ? '' : 'none';
 			line.innerHTML = '';

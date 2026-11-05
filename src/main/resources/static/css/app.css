@@ -1194,3 +1194,8 @@ a.btn-primary, a.btn-secondary { display: inline-block; text-decoration: none; }
 .status-table .status-step, .status-table .status-state { white-space: nowrap; }
 .status-table .status-when { width: 92px; white-space: nowrap; }
 .status-comment { color: var(--muted); word-break: break-word; }
+
+/* 예약 참석자, 일정 참여자 */
+.attendee-row { margin-bottom: 14px; min-height: 34px; }
+.people-line { margin: 0 0 14px; font-size: 14px; }
+.people-line strong { margin-right: 6px; }

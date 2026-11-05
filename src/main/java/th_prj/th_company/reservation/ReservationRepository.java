@@ -30,25 +30,29 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 	List<Reservation> findConflicts(@Param("resourceId") Long resourceId, @Param("start") LocalDateTime start,
 			@Param("end") LocalDateTime end, @Param("excludeId") Long excludeId);
 
-	/** 내 예약 중 아직 끝나지 않은 것 */
+	/** 내가 예약했거나 참석하는 예약 중 아직 끝나지 않은 것 */
 	@Query("""
 		select r from Reservation r
 		join fetch r.resource
+		join fetch r.owner
 		left join fetch r.series
-		where r.owner.id = :ownerId and r.endAt > :now
+		where (r.owner.id = :memberId or exists (select a from r.attendees a where a.id = :memberId))
+			and r.endAt > :now
 		order by r.startAt
 		""")
-	List<Reservation> findUpcoming(@Param("ownerId") Long ownerId, @Param("now") LocalDateTime now);
+	List<Reservation> findUpcoming(@Param("memberId") Long memberId, @Param("now") LocalDateTime now);
 
-	/** 내 지난 예약 (since 이후, 최근 것부터) */
+	/** 내가 예약했거나 참석한 지난 예약 (since 이후, 최근 것부터) */
 	@Query("""
 		select r from Reservation r
 		join fetch r.resource
+		join fetch r.owner
 		left join fetch r.series
-		where r.owner.id = :ownerId and r.endAt <= :now and r.startAt >= :since
+		where (r.owner.id = :memberId or exists (select a from r.attendees a where a.id = :memberId))
+			and r.endAt <= :now and r.startAt >= :since
 		order by r.startAt desc
 		""")
-	List<Reservation> findPast(@Param("ownerId") Long ownerId, @Param("now") LocalDateTime now,
+	List<Reservation> findPast(@Param("memberId") Long memberId, @Param("now") LocalDateTime now,
 			@Param("since") LocalDateTime since);
 
 	@Query("select r from Reservation r join fetch r.owner join fetch r.resource left join fetch r.series where r.id = :id")

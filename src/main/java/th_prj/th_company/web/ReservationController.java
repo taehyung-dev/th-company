@@ -26,6 +26,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.validation.Valid;
+import th_prj.th_company.approval.ApprovalService;
 import th_prj.th_company.common.BusinessException;
 import th_prj.th_company.common.SecurityUtils;
 import th_prj.th_company.reservation.RepeatRule;
@@ -48,9 +49,11 @@ public class ReservationController {
 	private static final String KIND = "{kind:rooms|resources}";
 
 	private final ReservationService reservationService;
+	private final ApprovalService approvalService;
 
-	public ReservationController(ReservationService reservationService) {
+	public ReservationController(ReservationService reservationService, ApprovalService approvalService) {
 		this.reservationService = reservationService;
+		this.approvalService = approvalService;
 	}
 
 	/** 예전 주소: 회의실 예약으로 */
@@ -82,13 +85,17 @@ public class ReservationController {
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime start,
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime end,
-			Authentication authentication, Model model) {
+			@RequestParam(required = false) List<Long> attendee, Authentication authentication, Model model) {
 		ReservationForm form = reservationService.newForm(kind(path), resource, date, start);
 		if (endDate != null && !endDate.isBefore(form.getDate())) {
 			form.setEndDate(endDate);
 		}
 		if (end != null) {
 			form.setEndTime(end);
+		}
+		// 자원이나 날짜를 바꿔 화면을 다시 불러와도 고른 참석자는 남긴다
+		if (attendee != null) {
+			form.setAttendeeIds(attendee);
 		}
 		model.addAttribute("form", form);
 		return renderForm(authentication, model);
@@ -165,6 +172,11 @@ public class ReservationController {
 			multiDay ? form.getEndDate() : null, form.getId(), authentication.getName()));
 		model.addAttribute("multiDay", multiDay);
 		model.addAttribute("repeatRules", RepeatRule.values());
+		if (!multiDay) {
+			model.addAttribute("approverGroups", approvalService.approverGroups(authentication.getName()));
+			model.addAttribute("selectedAttendees", approvalService.approverLabels(form.getAttendeeIds()));
+			model.addAttribute("maxAttendees", ReservationService.MAX_ATTENDEES);
+		}
 		model.addAttribute("files", form.getId() == null ? List.of() : reservationService.ownFiles(form.getId()));
 		return common(form.getKind(), "day", authentication, model, "reservation/form");
 	}

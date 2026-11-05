@@ -57,8 +57,14 @@ public class ReservationForm {
 	/** 반복할 때 이미 예약된 날을 건너뛴다. 아니면 하나라도 겹치면 예약하지 않는다 */
 	private boolean skipConflicts;
 
+	/** 회의실 예약의 참석자 */
+	private List<Long> attendeeIds = new ArrayList<>();
+
 	/** 저장할 때 지울 첨부파일 */
 	private List<Long> deleteFileIds = new ArrayList<>();
+
+	public List<Long> getAttendeeIds() { return attendeeIds; }
+	public void setAttendeeIds(List<Long> attendeeIds) { this.attendeeIds = attendeeIds; }
 
 	public LocalDate getEndDate() { return endDate; }
 	public void setEndDate(LocalDate endDate) { this.endDate = endDate; }

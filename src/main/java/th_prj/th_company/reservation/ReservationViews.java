@@ -72,7 +72,8 @@ public final class ReservationViews {
 	/** 예약 한 건 (상세, 내 예약 목록) */
 	public record Item(Long id, ReservationKind kind, Long resourceId, ResourceType resourceType, String resourceName, String location,
 			String title, String ownerName, String ownerDept, LocalDateTime startAt, LocalDateTime endAt,
-			String memo, boolean editable, boolean ended, Long seriesId, RepeatRule repeat, LocalDate repeatUntil) {
+			String memo, boolean editable, boolean ended, Long seriesId, RepeatRule repeat, LocalDate repeatUntil,
+			List<String> attendeeNames, boolean attending) {
 
 		public String displayDate() {
 			return ReservationViews.displayDate(startAt.toLocalDate());
