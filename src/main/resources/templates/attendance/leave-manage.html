@@ -8,7 +8,7 @@
 		<div class="board-layout">
 			<nav th:replace="~{attendance/fragments :: nav}"></nav>
 
-			<section class="board-main">
+			<section class="board-main" th:fragment="manageContent">
 				<div class="board-head">
 					<div>
 						<h2>전체 휴가 현황</h2>
@@ -20,9 +20,9 @@
 				<div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
 
 				<div class="month-nav">
-					<a class="btn-secondary" th:href="@{/attendance/manage/leave(year=${year - 1})}">‹ 이전 해</a>
+					<a class="btn-secondary" th:href="@{${base}(year=${year - 1})}">‹ 이전 해</a>
 					<strong th:text="${year} + '년'">2026년</strong>
-					<a class="btn-secondary" th:href="@{/attendance/manage/leave(year=${year + 1})}">다음 해 ›</a>
+					<a class="btn-secondary" th:href="@{${base}(year=${year + 1})}">다음 해 ›</a>
 				</div>
 
 				<h3 class="res-section">직원별 연차</h3>
@@ -42,7 +42,7 @@
 							<td class="col-title" th:text="${m.deptName}">개발1팀</td>
 							<td class="col-period" th:text="${m.displayHireDate()}">2020.03.02</td>
 							<td class="col-grant">
-								<form class="grant-form" th:action="@{/attendance/manage/leave/grant}" method="post">
+								<form class="grant-form" th:action="@{|${base}/grant|}" method="post">
 									<input type="hidden" name="member" th:value="${m.memberId}">
 									<input type="hidden" name="year" th:value="${year}">
 									<input type="number" name="days" min="0" max="100" step="0.5" aria-label="연차 일수"
@@ -80,7 +80,7 @@
 							<td class="col-title" th:text="${r.reason} ?: '-'">사유</td>
 							<td class="col-state"><span class="tag" th:classappend="${r.status.css}" th:text="${r.status.label}">승인</span></td>
 							<td class="col-act">
-								<form th:if="${r.canCancel}" th:action="@{/attendance/manage/leave/{id}/cancel(id=${r.id})}" method="post"
+								<form th:if="${r.canCancel}" th:action="@{|${base}/${r.id}/cancel|}" method="post"
 								      th:attr="data-confirm=${r.memberName} + ' 님의 휴가를 취소할까요?'" onsubmit="return confirm(this.dataset.confirm)">
 									<input type="hidden" name="year" th:value="${year}">
 									<button type="submit" class="btn-link danger">취소</button>

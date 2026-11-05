@@ -1199,3 +1199,6 @@ a.btn-primary, a.btn-secondary { display: inline-block; text-decoration: none; }
 .attendee-row { margin-bottom: 14px; min-height: 34px; }
 .people-line { margin: 0 0 14px; font-size: 14px; }
 .people-line strong { margin-right: 6px; }
+
+/* 휴가 현황: 저장 버튼이 두 줄로 꺾이지 않게 */
+.grant-form .btn-link { white-space: nowrap; }
