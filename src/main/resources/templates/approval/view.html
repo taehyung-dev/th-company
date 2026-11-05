@@ -112,6 +112,7 @@
 						<form th:if="${doc.canRedraft}" th:action="@{/approval/docs/{id}/redraft(id=${doc.id})}" method="post">
 							<button type="submit" class="btn-primary">재기안</button>
 						</form>
+						<button type="button" class="btn-secondary" onclick="window.print()">인쇄</button>
 					</footer>
 				</div>
 

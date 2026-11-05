@@ -1172,7 +1172,7 @@ a.btn-primary, a.btn-secondary { display: inline-block; text-decoration: none; }
 
 @page { size: A4; margin: 15mm; }
 @media print {
-	.topbar, .board-tree, .board-head, .alert, .decide-bar, .doc-after, .comments, .form-buttons, .stamp-tools { display: none; }
+	.site-header, .topbar, .menubar, .board-tree, .board-head, .alert, .decide-bar, .doc-after, .comments, .form-buttons, .stamp-tools { display: none; }
 	.layout, .board-layout { display: block; min-height: 0; }
 	.content { padding: 0; }
 	.a4-page { max-width: none; }
