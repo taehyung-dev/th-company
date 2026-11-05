@@ -13,6 +13,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import jakarta.servlet.http.HttpServletRequest;
 import th_prj.th_company.common.BusinessException;
 import th_prj.th_company.leave.LeaveService;
+import th_prj.th_company.leave.LeaveViews;
+import th_prj.th_company.org.OrgChartService;
 
 /**
  * 전체 휴가 현황. 근태 메뉴(근태관리자와 관리자)와 관리자 화면(관리자)에서 같이 쓴다 (SecurityConfig).
@@ -25,9 +27,11 @@ public class LeaveManageController {
 	static final String ADMIN_PATH = "/admin/attendance/leave";
 
 	private final LeaveService leaveService;
+	private final OrgChartService orgChartService;
 
-	public LeaveManageController(LeaveService leaveService) {
+	public LeaveManageController(LeaveService leaveService, OrgChartService orgChartService) {
 		this.leaveService = leaveService;
+		this.orgChartService = orgChartService;
 	}
 
 	/** 관리자 화면 주소로 들어왔으면 관리자 화면 틀로 보여 준다 */
@@ -35,12 +39,15 @@ public class LeaveManageController {
 		return request.getRequestURI().substring(request.getContextPath().length()).startsWith("/admin/");
 	}
 
+	/** 직원별 연차는 조직도처럼 부서별로 보고, 휴가 신청은 사용 중지된 사람 것까지 회사 전체를 본다 */
 	@GetMapping
-	public String manage(@RequestParam(required = false) Integer year, HttpServletRequest request, Model model) {
+	public String manage(@RequestParam(required = false) Integer year, @RequestParam(required = false) Long dept,
+			Authentication authentication, HttpServletRequest request, Model model) {
 		int y = year == null ? leaveService.currentYear() : year;
 		model.addAttribute("menu", "leave-manage");
 		model.addAttribute("year", y);
-		model.addAttribute("members", leaveService.memberRows(y));
+		model.addAttribute("org", orgChartService.deptView(leaveService.memberRows(y), LeaveViews.MemberRow::deptId,
+			dept, authentication.getName()));
 		model.addAttribute("requests", leaveService.allRequests(y));
 		model.addAttribute("base", base(request));
 		return fromAdmin(request) ? "admin/leave-manage" : "attendance/leave-manage";
@@ -49,18 +56,19 @@ public class LeaveManageController {
 	/** days 를 비우면 입사일 기준으로 되돌린다 */
 	@PostMapping("/grant")
 	public String grant(@RequestParam Long member, @RequestParam int year, @RequestParam(required = false) Double days,
-			HttpServletRequest request, RedirectAttributes redirect) {
+			@RequestParam(required = false) Long dept, HttpServletRequest request, RedirectAttributes redirect) {
 		try {
 			leaveService.setGranted(member, year, days);
 			redirect.addFlashAttribute("message", "연차 일수를 저장했습니다.");
 		} catch (BusinessException e) {
 			redirect.addFlashAttribute("error", e.getMessage());
 		}
-		return "redirect:" + base(request) + "?year=" + year;
+		return back(request, year, dept);
 	}
 
 	@PostMapping("/{id}/cancel")
-	public String cancelByManager(@PathVariable Long id, @RequestParam int year, Authentication authentication,
+	public String cancelByManager(@PathVariable Long id, @RequestParam int year,
+			@RequestParam(required = false) Long dept, Authentication authentication,
 			HttpServletRequest request, RedirectAttributes redirect) {
 		try {
 			leaveService.cancelByManager(id, authentication.getName());
@@ -68,7 +76,12 @@ public class LeaveManageController {
 		} catch (BusinessException e) {
 			redirect.addFlashAttribute("error", e.getMessage());
 		}
-		return "redirect:" + base(request) + "?year=" + year;
+		return back(request, year, dept);
+	}
+
+	/** 저장한 뒤에도 보던 부서에 머문다 */
+	private static String back(HttpServletRequest request, int year, Long dept) {
+		return "redirect:" + base(request) + "?year=" + year + (dept == null ? "" : "&dept=" + dept);
 	}
 
 	private static String base(HttpServletRequest request) {

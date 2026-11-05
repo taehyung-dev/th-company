@@ -1091,7 +1091,8 @@ a.btn-primary, a.btn-secondary { display: inline-block; text-decoration: none; }
 .leave-table .col-type { width: 90px; }
 .leave-table .col-period { width: 190px; }
 .leave-table .col-days { width: 70px; text-align: center; }
-.leave-table .col-grant { width: 140px; }
+.leave-table .col-grant { width: 160px; }
+.leave-table .col-hire { width: 100px; }
 .leave-table .col-state { width: 80px; }
 .leave-table .col-act { width: 60px; text-align: right; }
 .leave-table .col-act form, .post-table .col-act form { margin: 0; }
@@ -1201,7 +1202,7 @@ a.btn-primary, a.btn-secondary { display: inline-block; text-decoration: none; }
 .people-line strong { margin-right: 6px; }
 
 /* 휴가 현황: 저장 버튼이 두 줄로 꺾이지 않게 */
-.grant-form .btn-link { white-space: nowrap; }
+.grant-form .btn-secondary { padding: 4px 12px; white-space: nowrap; }
 
 /* 사람 목록을 조직도처럼 보여 주는 관리 화면 */
 .org-manage { grid-template-columns: 220px minmax(0, 1fr); margin-bottom: 20px; }
@@ -1210,6 +1211,7 @@ a.btn-primary, a.btn-secondary { display: inline-block; text-decoration: none; }
 .org-name { white-space: nowrap; }
 .org-name small { margin-left: 4px; color: var(--muted); }
 .org-name small.duty { color: var(--primary); }
+.board-panel:has(> .leave-table) { overflow-x: auto; }
 @media (max-width: 900px) {
 	.org-manage { grid-template-columns: 1fr; }
 }

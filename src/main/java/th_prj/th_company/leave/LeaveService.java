@@ -3,7 +3,6 @@ package th_prj.th_company.leave;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +27,7 @@ import th_prj.th_company.leave.LeaveViews.Row;
 import th_prj.th_company.leave.LeaveViews.Summary;
 import th_prj.th_company.member.Member;
 import th_prj.th_company.member.MemberRepository;
+import th_prj.th_company.org.OrgChartService;
 import th_prj.th_company.notification.NotificationService;
 
 /**
@@ -93,8 +93,10 @@ public class LeaveService {
 		Map<Long, LeaveBalance> balances = balanceRepository.findByBalanceYear(year).stream()
 			.collect(Collectors.toMap(b -> b.getMember().getId(), b -> b));
 		return memberRepository.findActiveWithDepartment().stream()
-			.sorted(Comparator.comparing((Member m) -> m.getDepartment().getName()).thenComparing(Member::getName))
-			.map(m -> new MemberRow(m.getId(), m.getName(), m.getDepartment().getName(), m.getHireDate(),
+			.sorted(OrgChartService.MEMBER_ORDER)
+			.map(m -> new MemberRow(m.getId(), m.getName(), m.getDepartment().getId(),
+				m.getGrade() == null ? null : m.getGrade().getName(),
+				m.getDuty() == null ? null : m.getDuty().getName(), m.getPhotoUrl(), m.getHireDate(),
 				summary(m, year, balances.get(m.getId()), byMember.getOrDefault(m.getId(), List.of()))))
 			.toList();
 	}
