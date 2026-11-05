@@ -137,6 +137,11 @@ public class ApprovalService {
 				d.getDrafter().getName(), d.getSubmittedAt(), d.getStatus(), null));
 	}
 
+	/** 이 사람의 결재를 기다리는 진행 중 문서 (지금 차례이거나 앞 단계 뒤에 대기 중) */
+	public List<String> waitingDocNos(Long memberId) {
+		return lineRepository.findWaitingDocNos(memberId, DocStatus.IN_PROGRESS, List.of(LineStatus.PENDING, LineStatus.WAITING));
+	}
+
 	// ---------- 양식 / 결재선 후보 ----------
 
 	public List<ApprovalTemplate> templates() {

@@ -24,6 +24,16 @@ public interface ApprovalLineRepository extends JpaRepository<ApprovalLine, Long
 	@Query("select l from ApprovalLine l join fetch l.approver where l.document.id in :documentIds order by l.step")
 	List<ApprovalLine> findByDocuments(@Param("documentIds") Collection<Long> documentIds);
 
+	/** 이 사람이 앞으로 결재해야 할 진행 중 문서 번호 */
+	@Query("""
+		select distinct d.docNo from ApprovalLine l
+		join l.document d
+		where l.approver.id = :memberId and d.status = :status and l.status in :waiting
+		order by d.docNo
+		""")
+	List<String> findWaitingDocNos(@Param("memberId") Long memberId, @Param("status") DocStatus status,
+			@Param("waiting") Collection<LineStatus> waiting);
+
 	@Modifying
 	@Query("delete from ApprovalLine l where l.document.id = :documentId")
 	void deleteByDocument(@Param("documentId") Long documentId);
