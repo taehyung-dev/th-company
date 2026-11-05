@@ -85,6 +85,9 @@ public interface ApprovalDocumentRepository extends JpaRepository<ApprovalDocume
 		""")
 	Optional<ApprovalDocument> findDetail(@Param("id") Long id);
 
+	/** 이 문서로 재기안해 아직 보관함에 있는 문서 */
+	Optional<ApprovalDocument> findFirstByRedraftedFromIdAndStatus(Long originId, DocStatus status);
+
 	long countByDocNoStartingWith(String prefix);
 
 	long countByTemplateId(Long templateId);

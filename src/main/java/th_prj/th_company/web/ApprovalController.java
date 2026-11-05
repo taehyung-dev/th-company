@@ -169,6 +169,18 @@ public class ApprovalController {
 		}
 	}
 
+	@PostMapping("/docs/{id}/redraft")
+	public String redraft(@PathVariable Long id, Authentication authentication, RedirectAttributes redirect) {
+		try {
+			Long newId = approvalService.redraft(id, authentication.getName());
+			redirect.addFlashAttribute("message", "재기안 문서를 보관함에 만들었습니다. 내용을 고친 뒤 상신하세요.");
+			return "redirect:/approval/docs/" + newId + "/edit";
+		} catch (BusinessException e) {
+			redirect.addFlashAttribute("error", e.getMessage());
+			return "redirect:/approval/docs/" + id;
+		}
+	}
+
 	// ---------- 대결 설정 ----------
 
 	@GetMapping("/delegation")

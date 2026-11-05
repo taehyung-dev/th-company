@@ -79,6 +79,14 @@
 						<tr th:unless="${#lists.isEmpty(doc.ccNames)}">
 							<th>참조</th><td colspan="3" th:text="${#strings.listJoin(doc.ccNames, ', ')}">홍길동</td>
 						</tr>
+						<tr th:if="${doc.originDocNo}">
+							<th>재기안</th>
+							<td colspan="3">
+								<a th:if="${doc.originId}" th:href="@{/approval/docs/{id}(id=${doc.originId})}" th:text="${doc.originDocNo}">품의-2026-0001</a>
+								<span th:unless="${doc.originId}" th:text="${doc.originDocNo}">품의-2026-0001</span>
+								<span class="muted">문서를 고쳐 다시 올린 문서입니다.</span>
+							</td>
+						</tr>
 					</table>
 
 					<table class="doc-info doc-field-table" th:unless="${#lists.isEmpty(doc.fields)}">
@@ -100,6 +108,9 @@
 						<form th:if="${doc.canWithdraw}" th:action="@{/approval/docs/{id}/withdraw(id=${doc.id})}" method="post"
 						      onsubmit="return confirm('문서를 회수할까요? 보관함으로 이동합니다.')">
 							<button type="submit" class="btn-secondary">회수</button>
+						</form>
+						<form th:if="${doc.canRedraft}" th:action="@{/approval/docs/{id}/redraft(id=${doc.id})}" method="post">
+							<button type="submit" class="btn-primary">재기안</button>
 						</form>
 					</footer>
 				</div>

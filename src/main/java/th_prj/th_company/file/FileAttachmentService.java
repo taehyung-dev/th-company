@@ -75,6 +75,21 @@ public class FileAttachmentService {
 		}
 	}
 
+	/** 첨부파일을 다른 대상으로 복사한다. 디스크에 없는 파일은 건너뛴다 */
+	@Transactional
+	public void copyAll(FileOwner owner, Long fromId, Long toId) {
+		List<String> stored = new ArrayList<>();
+		deleteIfRolledBack(stored);
+		for (FileAttachment f : repository.findByOwnerTypeAndOwnerIdOrderById(owner, fromId)) {
+			if (!fileStorage.load(f.getStoredName()).exists()) {
+				continue;
+			}
+			String copied = fileStorage.copy(f.getStoredName());
+			stored.add(copied);
+			repository.save(new FileAttachment(owner, toId, f.getOriginalName(), copied, f.getSize(), f.getContentType()));
+		}
+	}
+
 	@Transactional
 	public void deleteAll(FileOwner owner, Long ownerId) {
 		remove(repository.findByOwnerTypeAndOwnerIdOrderById(owner, ownerId));

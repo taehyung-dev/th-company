@@ -42,6 +42,7 @@ import th_prj.th_company.org.DepartmentService;
  * 임시저장(DRAFT) → 상신(IN_PROGRESS, 1단계 PENDING) → 단계별 승인 → 마지막 승인 시 APPROVED
  *                                                 ↘ 누구든 반려 시 REJECTED
  * 아무도 승인하기 전이면 기안자가 회수 → DRAFT (보관함)
+ * 반려되면 기안자가 재기안 → 내용을 복사한 새 DRAFT (보관함). 원래 문서는 그대로 남는다
  * </pre>
  * <ul>
  *   <li>참조자: 결재하지 않고 상신된 문서를 볼 수 있다 (참조문서함).</li>
@@ -490,6 +491,48 @@ public class ApprovalService {
 		documentRepository.delete(d);
 	}
 
+	/**
+	 * 재기안: 반려 문서의 내용, 결재선, 참조자, 첨부파일을 복사해 보관함에 새 문서를 만든다.
+	 * 사용 중지된 결재자와 참조자는 뺀다. 이미 재기안해 보관함에 있으면 그 문서를 돌려준다.
+	 */
+	@Transactional
+	public Long redraft(Long docId, String loginId) {
+		ApprovalDocument origin = documentRepository.findDetail(docId)
+			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+		if (!origin.getDrafter().getLoginId().equals(loginId)) {
+			throw new AccessDeniedException("기안자만 재기안할 수 있습니다.");
+		}
+		if (origin.getStatus() != DocStatus.REJECTED) {
+			throw new BusinessException("반려된 문서만 재기안할 수 있습니다.");
+		}
+		if (origin.isLinked()) {
+			throw new BusinessException("휴가 문서는 근태관리 > 내 휴가에서 다시 신청하세요.");
+		}
+		Optional<ApprovalDocument> existing = documentRepository.findFirstByRedraftedFromIdAndStatus(docId, DocStatus.DRAFT);
+		if (existing.isPresent()) {
+			return existing.get().getId();
+		}
+
+		ApprovalDocument doc = new ApprovalDocument(origin.getTemplate(), origin.getDrafter(), origin.getTitle(), origin.getContent());
+		doc.redraftOf(origin);
+		doc.changeFields(origin.getFields().stream()
+			.map(f -> new FieldValue(f.getLabel(), f.getType(), f.getValue())).toList());
+		documentRepository.save(doc);
+		int step = 1;
+		for (ApprovalLine l : lineRepository.findByDocument(docId)) {
+			if (l.getApprover().isEnabled()) {
+				lineRepository.save(new ApprovalLine(doc, step++, l.getApprover()));
+			}
+		}
+		for (ApprovalCc cc : ccRepository.findByDocument(docId)) {
+			if (cc.getMember().isEnabled()) {
+				ccRepository.save(new ApprovalCc(doc, cc.getMember()));
+			}
+		}
+		fileService.copyAll(FileOwner.APPROVAL, docId, doc.getId());
+		return doc.getId();
+	}
+
 	// ---------- 상세 / 결재 ----------
 
 	public DocView view(Long docId, String loginId) {
@@ -513,6 +556,8 @@ public class ApprovalService {
 		boolean canWithdraw = isDrafter && !d.isLinked() && d.getStatus() == DocStatus.IN_PROGRESS
 			&& lines.stream().noneMatch(l -> l.getStatus() == LineStatus.APPROVED);
 		boolean canEdit = isDrafter && d.getStatus() == DocStatus.DRAFT;
+		boolean canRedraft = isDrafter && !d.isLinked() && d.getStatus() == DocStatus.REJECTED;
+		ApprovalDocument origin = d.getRedraftedFrom();
 
 		Member drafter = d.getDrafter();
 		boolean draft = d.getStatus() == DocStatus.DRAFT;
@@ -531,7 +576,8 @@ public class ApprovalService {
 			d.getStatus(), d.getSubmittedAt(), d.getCompletedAt(),
 			lineViews, canDecide, canWithdraw, canEdit, canFinal,
 			deputy ? pending.get().getApprover().getName() : null,
-			ccs.stream().map(c -> label(c.getMember())).toList());
+			ccs.stream().map(c -> label(c.getMember())).toList(),
+			canRedraft, origin == null ? null : origin.getDocNo(), origin != null && isDrafter ? origin.getId() : null);
 	}
 
 	public List<FileInfo> files(Long docId) {
