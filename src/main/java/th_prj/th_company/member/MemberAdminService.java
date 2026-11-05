@@ -13,6 +13,7 @@ import th_prj.th_company.org.DepartmentService;
 import th_prj.th_company.org.HrCode;
 import th_prj.th_company.org.HrCodeService;
 import th_prj.th_company.org.HrCodeType;
+import th_prj.th_company.org.OrgChartService;
 
 /**
  * 관리자 화면의 사용자(임직원) 관리.
@@ -39,6 +40,7 @@ public class MemberAdminService {
 	public List<MemberRow> search(String keyword, Long departmentId, Boolean enabled) {
 		String kw = keyword == null || keyword.isBlank() ? null : keyword.trim();
 		return memberRepository.search(kw, departmentId, enabled).stream()
+			.sorted(OrgChartService.MEMBER_ORDER)
 			.map(MemberRow::from)
 			.toList();
 	}
