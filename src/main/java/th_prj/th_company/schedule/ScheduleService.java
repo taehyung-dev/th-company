@@ -7,7 +7,9 @@ import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
@@ -23,6 +25,8 @@ import th_prj.th_company.file.FileOwner;
 import th_prj.th_company.holiday.HolidayService;
 import th_prj.th_company.member.Member;
 import th_prj.th_company.member.MemberRepository;
+import th_prj.th_company.member.MemberSelection;
+import th_prj.th_company.notification.NotificationService;
 
 /**
  * 일정. 권한 규칙:
@@ -31,6 +35,8 @@ import th_prj.th_company.member.MemberRepository;
  *   <li>부서일정: 같은 부서원만 보기, 부서원 누구나 등록</li>
  *   <li>개인일정: 본인만</li>
  *   <li>수정/삭제: 등록자 또는 관리자</li>
+ *   <li>참여자: 지정하면 종류와 상관없이 일정을 본다</li>
+ *   <li>알림: 저장할 때 선택하면 보낸다. 받는 사람은 지정한 참여자와 그 일정을 보는 사람 (회사일정은 전 직원, 부서일정은 부서원)</li>
  * </ul>
  */
 @Service
@@ -39,18 +45,24 @@ public class ScheduleService {
 
 	/** 종일 일정의 종료 시각 */
 	private static final LocalTime END_OF_DAY = LocalTime.of(23, 59);
+	public static final int MAX_PARTICIPANTS = 50;
 
 	private final ScheduleRepository scheduleRepository;
 	private final MemberRepository memberRepository;
 	private final HolidayService holidayService;
 	private final FileAttachmentService fileService;
+	private final MemberSelection memberSelection;
+	private final NotificationService notificationService;
 
 	public ScheduleService(ScheduleRepository scheduleRepository, MemberRepository memberRepository,
-			HolidayService holidayService, FileAttachmentService fileService) {
+			HolidayService holidayService, FileAttachmentService fileService, MemberSelection memberSelection,
+			NotificationService notificationService) {
 		this.scheduleRepository = scheduleRepository;
 		this.memberRepository = memberRepository;
 		this.holidayService = holidayService;
 		this.fileService = fileService;
+		this.memberSelection = memberSelection;
+		this.notificationService = notificationService;
 	}
 
 	// ---------- 조회 ----------
@@ -152,6 +164,7 @@ public class ScheduleService {
 		form.setEndDate(s.getEndAt().toLocalDate());
 		form.setStartTime(s.isAllDay() ? LocalTime.of(9, 0) : s.getStartAt().toLocalTime());
 		form.setEndTime(s.isAllDay() ? LocalTime.of(10, 0) : s.getEndAt().toLocalTime());
+		form.setParticipantIds(s.getParticipants().stream().map(Member::getId).toList());
 		return form;
 	}
 
@@ -197,9 +210,29 @@ public class ScheduleService {
 		s.update(form.getType(), department, form.getTitle().trim(),
 			form.getDescription() == null || form.getDescription().isBlank() ? null : form.getDescription().trim(),
 			start, end, form.isAllDay());
+		s.changeParticipants(memberSelection.resolve(form.getParticipantIds(), s.getOwner(), s.getParticipants(),
+			MAX_PARTICIPANTS, "참여자"));
 		Long id = scheduleRepository.save(s).getId();
 		fileService.sync(FileOwner.SCHEDULE, id, uploads, form.getDeleteFileIds());
+		if (form.isNotifyParticipants()) {
+			notifyParticipants(s, me, form.getId() == null ? "등록" : "수정");
+		}
 		return id;
+	}
+
+	private void notifyParticipants(Schedule s, Member by, String action) {
+		List<Member> audience = new ArrayList<>(s.getParticipants());
+		switch (s.getType()) {
+			case COMPANY -> audience.addAll(memberRepository.findByEnabledTrue());
+			case DEPARTMENT -> audience.addAll(memberRepository.findByDepartmentIdAndEnabledTrue(s.getDepartment().getId()));
+			default -> {
+			}
+		}
+		Map<Long, Member> targets = new LinkedHashMap<>();
+		audience.forEach(m -> targets.put(m.getId(), m));
+		targets.remove(by.getId());
+		String message = by.getName() + " 님이 일정 '" + s.getTitle() + "'(" + toItem(s, by, false).displayPeriod() + ")을 " + action + "했습니다.";
+		targets.values().forEach(m -> notificationService.send(m, "일정", message, "/schedule/" + s.getId()));
 	}
 
 	@Transactional
@@ -220,6 +253,9 @@ public class ScheduleService {
 	}
 
 	private static boolean canSee(Schedule s, Member me) {
+		if (s.hasParticipant(me.getId())) {
+			return true;
+		}
 		return switch (s.getType()) {
 			case COMPANY -> true;
 			case DEPARTMENT -> s.getOwner().getId().equals(me.getId())
@@ -233,7 +269,7 @@ public class ScheduleService {
 		return new ScheduleItem(s.getId(), s.getType(), s.getTitle(), s.getDescription(),
 			s.getStartAt(), s.getEndAt(), s.isAllDay(), s.getOwner().getName(),
 			s.getDepartment() == null ? null : s.getDepartment().getName(),
-			manager || s.getOwner().getId().equals(me.getId()));
+			manager || s.getOwner().getId().equals(me.getId()), MemberSelection.displayNames(s.getParticipants()));
 	}
 
 	private Schedule find(Long id) {

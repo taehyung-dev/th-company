@@ -3,15 +3,17 @@ package th_prj.th_company.schedule;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 /**
  * 일정 상세/목록용.
  *
  * @param canEdit 현재 사용자가 수정/삭제할 수 있음
+ * @param participantNames 지정한 참여자
  */
 public record ScheduleItem(Long id, ScheduleType type, String title, String description,
 		LocalDateTime startAt, LocalDateTime endAt, boolean allDay,
-		String ownerName, String departmentName, boolean canEdit) {
+		String ownerName, String departmentName, boolean canEdit, List<String> participantNames) {
 
 	private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy.MM.dd (E)");
 	private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm");

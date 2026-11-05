@@ -1,6 +1,11 @@
 package th_prj.th_company.schedule;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+import org.hibernate.annotations.BatchSize;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -12,6 +17,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
@@ -20,7 +27,7 @@ import th_prj.th_company.member.Member;
 import th_prj.th_company.org.Department;
 
 /**
- * 일정. 회사일정은 전원, 부서일정은 department 소속원, 개인일정은 owner 만 본다.
+ * 일정. 회사일정은 전원, 부서일정은 department 소속원, 개인일정은 owner 만 본다. 지정한 참여자는 종류와 상관없이 본다.
  * 종일 일정은 startAt = 시작일 00:00, endAt = 종료일 23:59 로 저장한다.
  */
 @Entity
@@ -60,6 +67,13 @@ public class Schedule {
 	@JoinColumn(name = "department_id")
 	private Department department;
 
+	/** 지정한 참여자 (등록자 제외) */
+	@ManyToMany(fetch = FetchType.LAZY)
+	@JoinTable(name = "schedule_participant", joinColumns = @JoinColumn(name = "schedule_id"),
+		inverseJoinColumns = @JoinColumn(name = "member_id"))
+	@BatchSize(size = 50)
+	private Set<Member> participants = new LinkedHashSet<>();
+
 	@Column(nullable = false, updatable = false)
 	private LocalDateTime createdAt;
 
@@ -94,6 +108,16 @@ public class Schedule {
 		this.allDay = allDay;
 	}
 
+	void changeParticipants(Collection<Member> members) {
+		participants.clear();
+		participants.addAll(members);
+	}
+
+	public boolean hasParticipant(Long memberId) {
+		return participants.stream().anyMatch(m -> m.getId().equals(memberId));
+	}
+
+	public Set<Member> getParticipants() { return Set.copyOf(participants); }
 	public Long getId() { return id; }
 	public ScheduleType getType() { return type; }
 	public String getTitle() { return title; }
