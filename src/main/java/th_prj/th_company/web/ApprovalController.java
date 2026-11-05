@@ -71,6 +71,34 @@ public class ApprovalController {
 		return "approval/status :: panel";
 	}
 
+	/** 미결문서 일괄결재. 문서마다 따로 처리하므로 일부가 실패해도 나머지는 결재된다 */
+	@PostMapping("/bulk-approve")
+	public String bulkApprove(@RequestParam(required = false) List<Long> ids, @RequestParam(required = false) String comment,
+			Authentication authentication, RedirectAttributes redirect) {
+		String back = "redirect:/approval/box/" + ApprovalBox.PENDING.getPath();
+		if (ids == null || ids.isEmpty()) {
+			redirect.addFlashAttribute("error", "결재할 문서를 선택하세요.");
+			return back;
+		}
+		int approved = 0;
+		for (Long id : ids) {
+			try {
+				approvalService.approve(id, authentication.getName(), comment);
+				approved++;
+			} catch (BusinessException | ResponseStatusException e) {
+				// 그사이 다른 사람이 처리한 문서 등. 건수로만 알린다
+			}
+		}
+		int failed = ids.size() - approved;
+		if (approved > 0) {
+			redirect.addFlashAttribute("message", approved + "건을 승인했습니다.");
+		}
+		if (failed > 0) {
+			redirect.addFlashAttribute("error", failed + "건은 결재할 수 없어 건너뛰었습니다.");
+		}
+		return back;
+	}
+
 	// ---------- 기안 ----------
 
 	/** 양식이 하나면 바로 작성 화면으로 */

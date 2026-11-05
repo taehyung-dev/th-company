@@ -48,6 +48,27 @@
 			.catch(function () { alert('결재상태를 불러오지 못했습니다. 화면을 새로고침한 뒤 다시 시도하세요.'); });
 	});
 
+	// 일괄결재
+	var bulkButton = document.getElementById('bulkButton');
+	var bulkDialog = document.getElementById('bulkDialog');
+	if (bulkButton) {
+		bulkButton.addEventListener('click', function () {
+			if (!needPicked()) return;
+			var ids = document.getElementById('bulkIds');
+			ids.replaceChildren();
+			picked().forEach(function (id) {
+				var input = document.createElement('input');
+				input.type = 'hidden';
+				input.name = 'ids';
+				input.value = id;
+				ids.appendChild(input);
+			});
+			document.getElementById('bulkHint').textContent = '선택한 ' + picked().length + '건을 승인합니다.';
+			bulkDialog.showModal();
+			document.getElementById('bulkComment').focus();
+		});
+	}
+
 	document.querySelectorAll('dialog [data-close]').forEach(function (b) {
 		b.addEventListener('click', function () { b.closest('dialog').close(); });
 	});

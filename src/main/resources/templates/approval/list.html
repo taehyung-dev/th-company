@@ -22,6 +22,7 @@
 				<!-- 문서를 체크하고 버튼을 누른다. 동작은 /js/approval-list.js -->
 				<div class="list-tools" th:unless="${docs.empty}">
 					<button type="button" class="btn-secondary" id="statusButton" th:attr="data-url=@{/approval/status}">결재상태 보기</button>
+					<button type="button" class="btn-primary" id="bulkButton" th:if="${box.name() == 'PENDING'}">일괄결재</button>
 					<span class="hint-inline" id="pickedCount"></span>
 				</div>
 
@@ -74,6 +75,26 @@
 						<button type="button" class="btn-secondary" data-close>닫기</button>
 					</div>
 					<div class="status-body" id="statusBody"></div>
+				</dialog>
+
+				<!-- 일괄결재 창. th:action 이 있어야 CSRF 토큰이 자동으로 들어간다 -->
+				<dialog id="bulkDialog" class="preview-dialog decide-dialog" th:if="${box.name() == 'PENDING'}">
+					<form method="post" th:action="@{/approval/bulk-approve}">
+						<div class="preview-bar">
+							<strong>일괄결재</strong>
+							<span class="hint-inline" id="bulkHint"></span>
+							<button type="button" class="btn-secondary" data-close>닫기</button>
+						</div>
+						<div class="decide-body">
+							<label for="bulkComment">결재 의견 <span class="hint-inline">(선택, 모든 문서에 같이 남습니다)</span></label>
+							<textarea id="bulkComment" name="comment" rows="4" maxlength="500"></textarea>
+							<div id="bulkIds"></div>
+						</div>
+						<div class="picker-foot">
+							<button type="button" class="btn-secondary" data-close>취소</button>
+							<button type="submit" class="btn-primary">승인</button>
+						</div>
+					</form>
 				</dialog>
 			</section>
 		</div>
