@@ -580,6 +580,11 @@ public class ApprovalService {
 			canRedraft, origin == null ? null : origin.getDocNo(), origin != null && isDrafter ? origin.getId() : null);
 	}
 
+	/** 목록의 [결재상태 보기]. 볼 권한이 없는 문서가 섞이면 거절한다 */
+	public List<DocView> statuses(List<Long> docIds, String loginId) {
+		return docIds.stream().map(id -> view(id, loginId)).toList();
+	}
+
 	public List<FileInfo> files(Long docId) {
 		return fileService.list(FileOwner.APPROVAL, docId);
 	}

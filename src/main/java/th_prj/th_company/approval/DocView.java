@@ -2,6 +2,8 @@ package th_prj.th_company.approval;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -33,6 +35,13 @@ public record DocView(Long id, String docNo, String templateName, String title, 
 
 	public String displayCompletedAt() {
 		return completedAt == null ? "-" : completedAt.format(DATE_TIME);
+	}
+
+	/** 결재상태 창: 높은 사람이 위로 가도록 마지막 결재자부터 */
+	public List<LineView> linesTopDown() {
+		List<LineView> reversed = new ArrayList<>(lines);
+		Collections.reverse(reversed);
+		return reversed;
 	}
 
 	public record LineView(int step, String approverName, String deptName, String gradeName,

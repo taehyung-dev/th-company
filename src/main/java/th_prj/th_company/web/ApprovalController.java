@@ -61,6 +61,16 @@ public class ApprovalController {
 		return "approval/list";
 	}
 
+	/** 목록의 [결재상태 보기]가 창에 넣는 HTML 조각 */
+	@GetMapping("/status")
+	public String status(@RequestParam(required = false) List<Long> ids, Authentication authentication, Model model) {
+		if (ids == null || ids.isEmpty() || ids.size() > ApprovalService.PAGE_SIZE) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+		}
+		model.addAttribute("docs", approvalService.statuses(ids, authentication.getName()));
+		return "approval/status :: panel";
+	}
+
 	// ---------- 기안 ----------
 
 	/** 양식이 하나면 바로 작성 화면으로 */

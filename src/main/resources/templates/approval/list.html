@@ -19,10 +19,17 @@
 				<div class="alert alert-info" th:if="${message}" th:text="${message}"></div>
 				<div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
 
+				<!-- 문서를 체크하고 버튼을 누른다. 동작은 /js/approval-list.js -->
+				<div class="list-tools" th:unless="${docs.empty}">
+					<button type="button" class="btn-secondary" id="statusButton" th:attr="data-url=@{/approval/status}">결재상태 보기</button>
+					<span class="hint-inline" id="pickedCount"></span>
+				</div>
+
 				<div class="board-panel">
 					<table class="post-table doc-table">
 						<thead>
 						<tr>
+							<th class="col-check"><input type="checkbox" id="checkAll" aria-label="전체 선택" th:unless="${docs.empty}"></th>
 							<th class="col-docno">문서번호</th>
 							<th class="col-form">양식</th>
 							<th>제목</th>
@@ -33,6 +40,7 @@
 						</thead>
 						<tbody>
 						<tr th:each="d : ${docs.content}">
+							<td class="col-check"><input type="checkbox" class="doc-check" th:value="${d.id}" th:attr="aria-label=${d.title} + ' 선택'"></td>
 							<td class="col-docno" th:text="${d.docNo} ?: '-'">품의-2026-0001</td>
 							<td class="col-form" th:text="${d.templateName}">품의서</td>
 							<td class="col-title">
@@ -58,9 +66,19 @@
 					   th:href="@{/approval/box/{p}(p=${box.path}, page=${n})}">1</a>
 					<a th:if="${docs.hasNext()}" th:href="@{/approval/box/{p}(p=${box.path}, page=${docs.number + 2})}">›</a>
 				</nav>
+
+				<!-- 결재상태 창: 체크한 문서의 결재 진행 상황 -->
+				<dialog id="statusDialog" class="preview-dialog decide-dialog status-dialog">
+					<div class="preview-bar">
+						<strong>결재상태</strong>
+						<button type="button" class="btn-secondary" data-close>닫기</button>
+					</div>
+					<div class="status-body" id="statusBody"></div>
+				</dialog>
 			</section>
 		</div>
 	</main>
 </div>
+<script th:src="@{/js/approval-list.js}"></script>
 </body>
 </html>
