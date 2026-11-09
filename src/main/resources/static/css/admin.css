@@ -245,3 +245,6 @@ a.btn-primary, a.btn-secondary { display: inline-block; text-decoration: none; }
 .admin-menubar a { color: #d1d5db; }
 .admin-menubar a:hover { color: #fff; }
 .admin-menubar a.active { border-bottom-color: #fff; color: #fff; }
+
+/* 제목 옆 설명이 길어도 제목은 한 줄로 */
+.content-head h2 { flex: none; }
