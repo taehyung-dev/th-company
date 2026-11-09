@@ -8,7 +8,7 @@
 		<div class="board-layout">
 			<nav th:replace="~{attendance/fragments :: nav}"></nav>
 
-			<section class="board-main">
+			<section class="board-main" th:fragment="manageContent">
 				<div class="board-head">
 					<div>
 						<h2>전체 휴가 현황</h2>
@@ -20,49 +20,64 @@
 				<div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
 
 				<div class="month-nav">
-					<a class="btn-secondary" th:href="@{/attendance/manage/leave(year=${year - 1})}">‹ 이전 해</a>
+					<a class="btn-secondary" th:href="@{${base}(year=${year - 1},dept=${org.selectedId})}">‹ 이전 해</a>
 					<strong th:text="${year} + '년'">2026년</strong>
-					<a class="btn-secondary" th:href="@{/attendance/manage/leave(year=${year + 1})}">다음 해 ›</a>
+					<a class="btn-secondary" th:href="@{${base}(year=${year + 1},dept=${org.selectedId})}">다음 해 ›</a>
+					<a class="btn-secondary excel-btn" th:href="@{|${base}/excel|(year=${year})}"
+					   title="회사 전체를 엑셀로 내려받습니다">엑셀 다운로드</a>
 				</div>
 
-				<h3 class="res-section">직원별 연차</h3>
-				<div class="board-panel">
+				<div class="org org-manage">
+					<section th:replace="~{fragments/org :: deptTree(${org.departments}, ${org.selectedId}, ${org.noDeptCount}, |${base}?year=${year}|)}"></section>
+
+					<section class="org-members">
+						<div class="org-members-head">
+							<h3 th:text="${org.title}">개발1팀</h3>
+							<span class="today" th:text="${#lists.size(org.members)} + '명'">0명</span>
+						</div>
 					<table class="post-table leave-table">
 						<thead>
 						<tr>
-							<th class="col-type">이름</th><th class="col-title">부서</th><th class="col-period">입사일</th>
+							<th class="col-title">이름</th><th class="col-hire">입사일</th>
 							<th class="col-grant">연차</th><th class="col-days">사용</th><th class="col-days">결재 중</th><th class="col-days">남음</th>
 						</tr>
 						</thead>
 						<tbody>
-						<tr th:each="m : ${members}">
-							<td class="col-type">
+						<tr th:each="m : ${org.members}">
+							<td class="col-title org-name">
+								<span class="avatar avatar-sm">
+									<img th:if="${m.photoUrl}" th:src="@{${m.photoUrl}}" alt="" loading="lazy">
+									<th:block th:unless="${m.photoUrl}" th:text="${m.initial()}">홍</th:block>
+								</span>
 								<a th:href="@{/attendance/manage/members/{id}(id=${m.memberId})}" th:text="${m.name}">홍길동</a>
+								<small th:if="${m.gradeName}" th:text="${m.gradeName}">과장</small>
+								<small class="duty" th:if="${m.dutyName}" th:text="${m.dutyName}">팀장</small>
 							</td>
-							<td class="col-title" th:text="${m.deptName}">개발1팀</td>
-							<td class="col-period" th:text="${m.displayHireDate()}">2020.03.02</td>
+							<td class="col-hire" th:text="${m.displayHireDate()}">2020.03.02</td>
 							<td class="col-grant">
-								<form class="grant-form" th:action="@{/attendance/manage/leave/grant}" method="post">
+								<form class="grant-form" th:action="@{|${base}/grant|}" method="post">
 									<input type="hidden" name="member" th:value="${m.memberId}">
 									<input type="hidden" name="year" th:value="${year}">
+									<input type="hidden" name="dept" th:value="${org.selectedId}">
 									<input type="number" name="days" min="0" max="100" step="0.5" aria-label="연차 일수"
 									       th:value="${m.summary.custom} ? ${m.summary.displayGranted()} : ''"
 									       th:placeholder="${m.summary.displayGranted()}">
-									<button type="submit" class="btn-link">저장</button>
+									<button type="submit" class="btn-secondary">저장</button>
 								</form>
 							</td>
 							<td class="col-days" th:text="${m.summary.displayUsed()}">0</td>
 							<td class="col-days" th:text="${m.summary.displayPending()}">0</td>
 							<td class="col-days" th:text="${m.summary.displayRemaining()}">15</td>
 						</tr>
-						<tr th:if="${#lists.isEmpty(members)}">
-							<td colspan="7" class="empty">재직자가 없습니다.</td>
+						<tr th:if="${#lists.isEmpty(org.members)}">
+							<td colspan="6" class="empty">이 부서에 재직자가 없습니다.</td>
 						</tr>
 						</tbody>
 					</table>
+					</section>
 				</div>
 
-				<h3 class="res-section">휴가 신청</h3>
+				<h3 class="res-section">휴가 신청 (전체 부서)</h3>
 				<div class="board-panel">
 					<table class="post-table leave-table">
 						<thead>
@@ -80,9 +95,10 @@
 							<td class="col-title" th:text="${r.reason} ?: '-'">사유</td>
 							<td class="col-state"><span class="tag" th:classappend="${r.status.css}" th:text="${r.status.label}">승인</span></td>
 							<td class="col-act">
-								<form th:if="${r.canCancel}" th:action="@{/attendance/manage/leave/{id}/cancel(id=${r.id})}" method="post"
+								<form th:if="${r.canCancel}" th:action="@{|${base}/${r.id}/cancel|}" method="post"
 								      th:attr="data-confirm=${r.memberName} + ' 님의 휴가를 취소할까요?'" onsubmit="return confirm(this.dataset.confirm)">
 									<input type="hidden" name="year" th:value="${year}">
+									<input type="hidden" name="dept" th:value="${org.selectedId}">
 									<button type="submit" class="btn-link danger">취소</button>
 								</form>
 							</td>

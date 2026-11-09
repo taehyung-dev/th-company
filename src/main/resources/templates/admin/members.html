@@ -9,18 +9,14 @@
 	<main class="content">
 		<div class="content-head">
 			<h2>사용자 관리</h2>
-			<span class="today" th:text="${#lists.size(members)} + '명'">0명</span>
+			<span class="today" th:text="'전체 ' + ${total} + '명'">0명</span>
 			<a class="btn-primary head-action" th:href="@{/admin/members/new}">사용자 등록</a>
 		</div>
 		<th:block th:replace="~{admin/fragments :: alerts}"></th:block>
 
 		<form class="filters" th:action="@{/admin/members}" method="get">
-			<input type="search" name="q" th:value="${q}" placeholder="이름, 아이디, 사번">
-			<select name="dept">
-				<option value="">전체 부서</option>
-				<option th:each="d : ${departments}" th:value="${d.id}" th:selected="${d.id == dept}"
-				        th:text="${#strings.repeat('　', d.depth) + d.name}">부서</option>
-			</select>
+			<input type="hidden" name="dept" th:value="${org.selectedId}">
+			<input type="search" name="q" th:value="${q}" placeholder="회사 전체에서 이름, 아이디, 사번 검색">
 			<select name="status">
 				<option value="" th:selected="${status == ''}">전체 상태</option>
 				<option value="active" th:selected="${status == 'active'}">사용</option>
@@ -29,17 +25,31 @@
 			<button type="submit" class="btn-secondary">검색</button>
 		</form>
 
-		<section class="panel table-wrap">
+		<div class="org org-manage">
+			<section th:replace="~{fragments/org :: deptTree(${org.departments}, ${org.selectedId}, ${org.noDeptCount}, |/admin/members?status=${status}|)}"></section>
+
+			<section class="org-members">
+				<div class="org-members-head">
+					<h3 th:text="${org.title}">개발1팀</h3>
+					<span class="today" th:text="${#lists.size(org.members)} + '명'">0명</span>
+				</div>
+				<div class="table-wrap">
 			<table class="table">
 				<thead>
-				<tr><th>이름</th><th>아이디</th><th>사번</th><th>부서</th><th>직급</th><th>직책</th><th>이메일</th><th>권한</th><th>상태</th></tr>
+				<tr><th>이름</th><th>아이디</th><th>사번</th><th th:if="${searching}">부서</th><th>직급</th><th>직책</th><th>이메일</th><th>권한</th><th>상태</th></tr>
 				</thead>
 				<tbody>
-				<tr th:each="m : ${members}" th:classappend="${!m.enabled} ? 'row-disabled'">
-					<td><a th:href="@{/admin/members/{id}(id=${m.id})}" th:text="${m.name}">홍길동</a></td>
+				<tr th:each="m : ${org.members}" th:classappend="${!m.enabled} ? 'row-disabled'">
+					<td class="org-name">
+						<span class="avatar avatar-sm">
+							<img th:if="${m.photoUrl}" th:src="@{${m.photoUrl}}" alt="" loading="lazy">
+							<th:block th:unless="${m.photoUrl}" th:text="${m.initial()}">홍</th:block>
+						</span>
+						<a th:href="@{/admin/members/{id}(id=${m.id})}" th:text="${m.name}">홍길동</a>
+					</td>
 					<td th:text="${m.loginId}">hong</td>
 					<td th:text="${m.employeeNo}"></td>
-					<td th:text="${m.departmentName}"></td>
+					<td th:if="${searching}" th:text="${m.departmentName}"></td>
 					<td th:text="${m.gradeName}"></td>
 					<td th:text="${m.dutyName}"></td>
 					<td th:text="${m.email}"></td>
@@ -50,12 +60,14 @@
 					<td><span class="tag" th:classappend="${m.enabled} ? 'tag-on' : 'tag-off'"
 					          th:text="${m.enabled} ? '사용' : '사용 중지'">사용</span></td>
 				</tr>
-				<tr th:if="${#lists.isEmpty(members)}">
-					<td colspan="9" class="empty">조건에 맞는 사용자가 없습니다.</td>
+				<tr th:if="${#lists.isEmpty(org.members)}">
+					<td th:colspan="${searching} ? 9 : 8" class="empty">조건에 맞는 사용자가 없습니다.</td>
 				</tr>
 				</tbody>
 			</table>
-		</section>
+				</div>
+			</section>
+		</div>
 	</main>
 </div>
 </body>

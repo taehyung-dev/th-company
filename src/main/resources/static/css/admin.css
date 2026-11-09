@@ -238,3 +238,13 @@ a.btn-primary, a.btn-secondary { display: inline-block; text-decoration: none; }
 /* 예약 자원 관리 */
 .table td .sub { margin-top: 2px; font-size: 12px; color: var(--muted); }
 .table-wrap .hint { padding: 0 14px 12px; }
+
+/* 상단 구분 메뉴 */
+.admin-header .topbar { border-bottom: none; }
+.admin-menubar { background: #111827; border-bottom: none; }
+.admin-menubar a { color: #d1d5db; }
+.admin-menubar a:hover { color: #fff; }
+.admin-menubar a.active { border-bottom-color: #fff; color: #fff; }
+
+/* 제목 옆 설명이 길어도 제목은 한 줄로 */
+.content-head h2 { flex: none; }

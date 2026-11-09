@@ -20,6 +20,10 @@
 					</div>
 				</header>
 
+				<p class="people-line" th:unless="${#lists.isEmpty(item.participantNames)}">
+					<strong>참여자</strong> <span th:text="${#strings.listJoin(item.participantNames, ', ')}">홍길동 과장</span>
+				</p>
+
 				<ul th:replace="~{fragments/files :: view(${files})}"></ul>
 
 				<div class="post-body" th:text="${item.description} ?: '내용 없음'">내용</div>

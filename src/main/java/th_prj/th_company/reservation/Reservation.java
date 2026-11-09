@@ -1,6 +1,11 @@
 package th_prj.th_company.reservation;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+import org.hibernate.annotations.BatchSize;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,6 +15,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
@@ -53,6 +60,13 @@ public class Reservation {
 	@JoinColumn(name = "series_id")
 	private ReservationSeries series;
 
+	/** 회의실 예약의 참석자 (예약자 제외) */
+	@ManyToMany(fetch = FetchType.LAZY)
+	@JoinTable(name = "reservation_attendee", joinColumns = @JoinColumn(name = "reservation_id"),
+		inverseJoinColumns = @JoinColumn(name = "member_id"))
+	@BatchSize(size = 50)
+	private Set<Member> attendees = new LinkedHashSet<>();
+
 	@Column(nullable = false, updatable = false)
 	private LocalDateTime createdAt;
 
@@ -84,10 +98,20 @@ public class Reservation {
 		this.memo = memo;
 	}
 
+	void changeAttendees(Collection<Member> members) {
+		attendees.clear();
+		attendees.addAll(members);
+	}
+
+	public boolean hasAttendee(Long memberId) {
+		return attendees.stream().anyMatch(m -> m.getId().equals(memberId));
+	}
+
 	void joinSeries(ReservationSeries series) {
 		this.series = series;
 	}
 
+	public Set<Member> getAttendees() { return Set.copyOf(attendees); }
 	public ReservationSeries getSeries() { return series; }
 	public Long getId() { return id; }
 	public Resource getResource() { return resource; }

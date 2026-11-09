@@ -1,9 +1,14 @@
 package th_prj.th_company.web;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -20,12 +25,15 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.validation.Valid;
 import th_prj.th_company.approval.ApprovalBox;
+import th_prj.th_company.approval.ApprovalPdfService;
 import th_prj.th_company.approval.ApprovalService;
 import th_prj.th_company.approval.ApprovalTemplate;
 import th_prj.th_company.approval.DelegationForm;
 import th_prj.th_company.approval.DelegationService;
+import th_prj.th_company.approval.DocView;
 import th_prj.th_company.approval.DocRow;
 import th_prj.th_company.approval.DraftForm;
+import th_prj.th_company.approval.LineType;
 import th_prj.th_company.common.BusinessException;
 
 /**
@@ -37,8 +45,11 @@ public class ApprovalController {
 
 	private final ApprovalService approvalService;
 	private final DelegationService delegationService;
+	private final ApprovalPdfService approvalPdfService;
 
-	public ApprovalController(ApprovalService approvalService, DelegationService delegationService) {
+	public ApprovalController(ApprovalService approvalService, DelegationService delegationService,
+			ApprovalPdfService approvalPdfService) {
+		this.approvalPdfService = approvalPdfService;
 		this.approvalService = approvalService;
 		this.delegationService = delegationService;
 	}
@@ -59,6 +70,44 @@ public class ApprovalController {
 		model.addAttribute("box", box);
 		model.addAttribute("docs", docs);
 		return "approval/list";
+	}
+
+	/** 목록의 [결재상태 보기]가 창에 넣는 HTML 조각 */
+	@GetMapping("/status")
+	public String status(@RequestParam(required = false) List<Long> ids, Authentication authentication, Model model) {
+		if (ids == null || ids.isEmpty() || ids.size() > ApprovalService.PAGE_SIZE) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+		}
+		model.addAttribute("docs", approvalService.statuses(ids, authentication.getName()));
+		return "approval/status :: panel";
+	}
+
+	/** 미결문서 일괄결재. 문서마다 따로 처리하므로 일부가 실패해도 나머지는 결재된다 */
+	@PostMapping("/bulk-approve")
+	public String bulkApprove(@RequestParam(required = false) List<Long> ids, @RequestParam(required = false) String comment,
+			Authentication authentication, RedirectAttributes redirect) {
+		String back = "redirect:/approval/box/" + ApprovalBox.PENDING.getPath();
+		if (ids == null || ids.isEmpty()) {
+			redirect.addFlashAttribute("error", "결재할 문서를 선택하세요.");
+			return back;
+		}
+		int approved = 0;
+		for (Long id : ids) {
+			try {
+				approvalService.approve(id, authentication.getName(), comment);
+				approved++;
+			} catch (BusinessException | ResponseStatusException e) {
+				// 그사이 다른 사람이 처리한 문서 등. 건수로만 알린다
+			}
+		}
+		int failed = ids.size() - approved;
+		if (approved > 0) {
+			redirect.addFlashAttribute("message", approved + "건을 승인했습니다.");
+		}
+		if (failed > 0) {
+			redirect.addFlashAttribute("error", failed + "건은 결재할 수 없어 건너뛰었습니다.");
+		}
+		return back;
 	}
 
 	// ---------- 기안 ----------
@@ -136,6 +185,18 @@ public class ApprovalController {
 		return "approval/view";
 	}
 
+	/** 문서를 PDF 파일로 내려받는다. 문서를 볼 수 있는 사람만 */
+	@GetMapping("/docs/{id}/pdf")
+	public ResponseEntity<byte[]> pdf(@PathVariable Long id, Authentication authentication) {
+		DocView doc = approvalService.view(id, authentication.getName());
+		byte[] pdf = approvalPdfService.render(doc, approvalService.files(id), authentication.getName());
+		return ResponseEntity.ok()
+			.header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
+				.filename(ApprovalPdfService.fileName(doc), StandardCharsets.UTF_8).build().toString())
+			.contentType(MediaType.APPLICATION_PDF)
+			.body(pdf);
+	}
+
 	@PostMapping("/docs/{id}/approve")
 	public String approve(@PathVariable Long id, @RequestParam(required = false) String comment,
 			Authentication authentication, RedirectAttributes redirect) {
@@ -163,6 +224,18 @@ public class ApprovalController {
 			approvalService.withdraw(id, authentication.getName());
 			redirect.addFlashAttribute("message", "회수했습니다. 보관함에서 수정 후 다시 상신할 수 있습니다.");
 			return "redirect:/approval/docs/" + id + "/edit";
+		} catch (BusinessException e) {
+			redirect.addFlashAttribute("error", e.getMessage());
+			return "redirect:/approval/docs/" + id;
+		}
+	}
+
+	@PostMapping("/docs/{id}/redraft")
+	public String redraft(@PathVariable Long id, Authentication authentication, RedirectAttributes redirect) {
+		try {
+			Long newId = approvalService.redraft(id, authentication.getName());
+			redirect.addFlashAttribute("message", "재기안 문서를 보관함에 만들었습니다. 내용을 고친 뒤 상신하세요.");
+			return "redirect:/approval/docs/" + newId + "/edit";
 		} catch (BusinessException e) {
 			redirect.addFlashAttribute("error", e.getMessage());
 			return "redirect:/approval/docs/" + id;
@@ -231,7 +304,8 @@ public class ApprovalController {
 		prepare(form.getId() == null ? "new" : ApprovalBox.DRAFTS.getPath(), authentication, model);
 		model.addAttribute("template", approvalService.templateForForm(form));
 		model.addAttribute("approverGroups", approvalService.approverGroups(authentication.getName()));
-		model.addAttribute("selectedApprovers", approvalService.approverLabels(form.getApproverIds()));
+		model.addAttribute("selectedLine", approvalService.selectedLine(form.getApproverIds(), form.getLineTypes()));
+		model.addAttribute("lineTypes", LineType.values());
 		model.addAttribute("selectedCc", approvalService.approverLabels(form.getCcIds()));
 		model.addAttribute("files", form.getId() == null ? List.of() : approvalService.files(form.getId()));
 		model.addAttribute("maxCc", ApprovalService.MAX_CC);

@@ -13,47 +13,87 @@
 				<div class="alert alert-info" th:if="${message}" th:text="${message}"></div>
 				<div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
 
-				<!-- 결재 처리: 버튼을 누르면 의견 입력 창이 열리고, 그 창의 버튼으로 처리된다 -->
-				<div class="decide-bar" th:if="${doc.canDecide}">
-					<span class="hint-inline" th:if="${doc.deputyFor}" th:text="${doc.deputyFor} + ' 님의 대결자로 결재합니다.'"></span>
-					<button type="button" class="btn-secondary danger" data-decide="반려" data-required="true"
-					        data-hint="반려 사유를 입력하세요." th:attr="data-action=@{/approval/docs/{id}/reject(id=${doc.id})}">반려</button>
-					<button type="button" class="btn-secondary" data-decide="전결" th:if="${doc.canFinalApprove}"
-					        data-hint="뒤 결재자의 결재 없이 문서가 완료됩니다." th:attr="data-action=@{/approval/docs/{id}/final-approve(id=${doc.id})}">전결</button>
-					<button type="button" class="btn-primary" data-decide="승인"
-					        th:attr="data-action=@{/approval/docs/{id}/approve(id=${doc.id})}">승인</button>
+				<!-- 상단 버튼. 왼쪽은 문서 다루기, 오른쪽은 결재 처리 (누르면 의견 입력 창이 열리고 그 창의 버튼으로 처리된다) -->
+				<div class="doc-toolbar">
+					<div class="doc-toolbar-group">
+						<a class="btn-secondary" th:href="@{/approval/box/{p}(p=${menu} ?: 'progress')}">목록</a>
+						<a class="btn-secondary" th:if="${doc.canEdit}" th:href="@{/approval/docs/{id}/edit(id=${doc.id})}">수정</a>
+						<form th:if="${doc.canWithdraw}" th:action="@{/approval/docs/{id}/withdraw(id=${doc.id})}" method="post"
+						      onsubmit="return confirm('문서를 회수할까요? 보관함으로 이동합니다.')">
+							<button type="submit" class="btn-secondary">회수</button>
+						</form>
+						<form th:if="${doc.canRedraft}" th:action="@{/approval/docs/{id}/redraft(id=${doc.id})}" method="post">
+							<button type="submit" class="btn-secondary">재기안</button>
+						</form>
+						<button type="button" class="btn-secondary" onclick="window.print()">인쇄</button>
+						<a class="btn-secondary" th:href="@{/approval/docs/{id}/pdf(id=${doc.id})}" title="문서를 PDF 파일로 내려받습니다">PDF 저장</a>
+					</div>
+					<div class="decide-bar" th:if="${doc.canDecide}">
+						<span class="hint-inline" th:if="${doc.deputyFor}"
+						      th:text="${doc.deputyFor} + ' 님의 대결자로 ' + (${doc.agreeing} ? '합의' : '결재') + '합니다.'"></span>
+						<button type="button" class="btn-secondary danger" data-decide="반려" data-required="true"
+						        data-hint="반려 사유를 입력하세요." th:attr="data-action=@{/approval/docs/{id}/reject(id=${doc.id})}">반려</button>
+						<button type="button" class="btn-secondary" data-decide="전결" th:if="${doc.canFinalApprove}"
+						        data-hint="뒤 결재자의 결재 없이 문서가 완료됩니다." th:attr="data-action=@{/approval/docs/{id}/final-approve(id=${doc.id})}">전결</button>
+						<button type="button" class="btn-primary" th:attr="data-decide=${doc.agreeing} ? '합의' : '승인',data-action=@{/approval/docs/{id}/approve(id=${doc.id})}"
+						        th:text="${doc.agreeing} ? '합의' : '승인'">승인</button>
+					</div>
 				</div>
 
 				<article class="doc a4-sheet">
 					<div class="doc-top">
 						<h2 class="doc-form-name" th:text="${doc.templateName}">품의서</h2>
 
+						<div class="stamp-tables">
 						<!-- 결재란 -->
 						<table class="stamp-table">
 							<tr>
 								<th rowspan="3" class="stamp-label">결<br>재</th>
 								<td class="stamp-grade">기안</td>
-								<td class="stamp-grade" th:each="l : ${doc.lines}" th:text="${l.gradeName} ?: (${l.step} + '차')">팀장</td>
+								<td class="stamp-grade" th:each="l : ${doc.approvalLines()}" th:text="${l.gradeName} ?: (${l.step} + '차')">팀장</td>
 							</tr>
 							<tr>
 								<td class="stamp-box">
 									<span class="stamp" th:if="${doc.submittedAt != null}">승인</span>
 									<span class="stamp-name" th:text="${doc.drafterName}">홍길동</span>
 								</td>
-								<td class="stamp-box" th:each="l : ${doc.lines}">
-									<span class="stamp" th:if="${l.status.name() == 'APPROVED'}"
-									      th:text="${l.finalApproval} ? '전결' : (${l.actedByName != null} ? '대결' : '승인')">승인</span>
-									<span class="stamp stamp-reject" th:if="${l.status.name() == 'REJECTED'}">반려</span>
-									<span class="stamp-name" th:text="${l.approverName}">김팀장</span>
-									<span class="stamp-deputy" th:if="${l.actedByName}" th:text="'(대결 ' + ${l.actedByName} + ')'">(대결 이대리)</span>
+								<td class="stamp-box" th:each="l : ${doc.approvalLines()}">
+									<th:block th:replace="~{:: stampCell(${l})}"></th:block>
 								</td>
 							</tr>
 							<tr>
 								<td class="stamp-date" th:text="${doc.submittedAt != null} ? ${#temporals.format(doc.submittedAt, 'MM.dd')} : ''">10.23</td>
-								<td class="stamp-date" th:each="l : ${doc.lines}"
-								    th:text="${l.actedAt != null} ? ${#temporals.format(l.actedAt, 'MM.dd')} : (${l.status.name() == 'PENDING'} ? '결재중' : '')">10.23</td>
+								<td class="stamp-date" th:each="l : ${doc.approvalLines()}"
+								    th:text="${l.actedAt != null} ? ${#temporals.format(l.actedAt, 'MM.dd')} : (${l.status.name() == 'PENDING'} ? ${l.statusLabel()} : '')">10.23</td>
 							</tr>
 						</table>
+						<!-- 합의란: 합의자가 있을 때만 -->
+						<table class="stamp-table" th:unless="${#lists.isEmpty(doc.agreementLines())}">
+							<tr>
+								<th rowspan="3" class="stamp-label">합<br>의</th>
+								<td class="stamp-grade" th:each="l : ${doc.agreementLines()}"
+								    th:text="(${l.gradeName} ?: '합의') + (${l.parallel} ? ' ∥' : '')" th:title="${l.parallel} ? '병렬 합의' : '순차 합의'">팀장</td>
+							</tr>
+							<tr>
+								<td class="stamp-box" th:each="l : ${doc.agreementLines()}">
+									<th:block th:replace="~{:: stampCell(${l})}"></th:block>
+								</td>
+							</tr>
+							<tr>
+								<td class="stamp-date" th:each="l : ${doc.agreementLines()}"
+								    th:text="${l.actedAt != null} ? ${#temporals.format(l.actedAt, 'MM.dd')} : (${l.status.name() == 'PENDING'} ? ${l.statusLabel()} : '')">10.23</td>
+							</tr>
+						</table>
+						</div>
+						<th:block th:if="false">
+							<!-- 결재란/합의란 한 칸 -->
+							<th:block th:fragment="stampCell(l)">
+								<span class="stamp" th:if="${l.status.name() == 'APPROVED'}" th:text="${l.stampText()}">승인</span>
+								<span class="stamp stamp-reject" th:if="${l.status.name() == 'REJECTED'}">반려</span>
+								<span class="stamp-name" th:text="${l.approverName}">김팀장</span>
+								<span class="stamp-deputy" th:if="${l.actedByName}" th:text="'(대리 ' + ${l.actedByName} + ')'">(대리 이대리)</span>
+							</th:block>
+						</th:block>
 					</div>
 
 					<table class="doc-info">
@@ -79,6 +119,14 @@
 						<tr th:unless="${#lists.isEmpty(doc.ccNames)}">
 							<th>참조</th><td colspan="3" th:text="${#strings.listJoin(doc.ccNames, ', ')}">홍길동</td>
 						</tr>
+						<tr th:if="${doc.originDocNo}">
+							<th>재기안</th>
+							<td colspan="3">
+								<a th:if="${doc.originId}" th:href="@{/approval/docs/{id}(id=${doc.originId})}" th:text="${doc.originDocNo}">품의-2026-0001</a>
+								<span th:unless="${doc.originId}" th:text="${doc.originDocNo}">품의-2026-0001</span>
+								<span class="muted">문서를 고쳐 다시 올린 문서입니다.</span>
+							</td>
+						</tr>
 					</table>
 
 					<table class="doc-info doc-field-table" th:unless="${#lists.isEmpty(doc.fields)}">
@@ -93,17 +141,6 @@
 					<ul th:replace="~{fragments/files :: view(${files})}"></ul>
 				</article>
 
-				<div class="doc-after">
-					<footer class="post-actions">
-						<a class="btn-secondary" th:href="@{/approval/box/{p}(p=${menu} ?: 'progress')}">목록</a>
-						<a class="btn-secondary" th:if="${doc.canEdit}" th:href="@{/approval/docs/{id}/edit(id=${doc.id})}">수정</a>
-						<form th:if="${doc.canWithdraw}" th:action="@{/approval/docs/{id}/withdraw(id=${doc.id})}" method="post"
-						      onsubmit="return confirm('문서를 회수할까요? 보관함으로 이동합니다.')">
-							<button type="submit" class="btn-secondary">회수</button>
-						</form>
-					</footer>
-				</div>
-
 				<!-- 결재 이력 -->
 				<section class="board-panel comments">
 					<h3>결재 이력</h3>
@@ -113,10 +150,11 @@
 								<strong th:text="${l.step} + '. ' + ${l.approverName}">1. 김팀장</strong>
 								<span th:text="${l.gradeName}">팀장</span>
 								<span th:text="${l.deptName}">개발1팀</span>
+								<span class="tag tag-agree" th:if="${l.agreement()}" th:text="${l.parallel} ? '병렬 합의' : '합의'">합의</span>
 								<span class="doc-status" th:classappend="'line-' + ${#strings.toLowerCase(l.status.name())}"
-								      th:text="${l.status.label}">대기</span>
+								      th:text="${l.statusLabel()}">대기</span>
 								<span class="tag tag-info" th:if="${l.finalApproval}">전결</span>
-								<span class="tag tag-info" th:if="${l.actedByName}" th:text="'대결 ' + ${l.actedByName}">대결</span>
+								<span class="tag tag-info" th:if="${l.actedByName}" th:text="(${l.agreement()} ? '대리 합의 ' : '대결 ') + ${l.actedByName}">대결</span>
 								<span th:text="${l.displayActedAt()}">10.23 10:00</span>
 							</div>
 							<p class="comment-body" th:if="${l.comment}" th:text="${l.comment}">의견</p>

@@ -135,11 +135,11 @@ class GroupwareFeatureTests {
 		MockHttpSession s = login(approver);
 		String home = mvc.perform(get("/").session(s)).andReturn().getResponse().getContentAsString();
 		assertThat(home.indexOf("aria-label=\"알림\"")).isPositive().isLessThan(home.indexOf("aria-label=\"마이페이지\""));
-		assertThat(home).doesNotContain("noti-badge");
+		assertThat(home).doesNotContain("class=\"noti-badge\"");
 
 		Long doc = draft(drafter, List.of(approver), List.of());
 		assertThat(notificationService.unreadCount(approver.getLoginId())).isEqualTo(1);
-		mvc.perform(get("/").session(s)).andExpect(content().string(containsString("noti-badge")));
+		mvc.perform(get("/").session(s)).andExpect(content().string(containsString("class=\"noti-badge\"")));
 		mvc.perform(get("/notifications/recent").session(s))
 			.andExpect(content().string(containsString("결재할 차례입니다")));
 

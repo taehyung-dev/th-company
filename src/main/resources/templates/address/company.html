@@ -12,7 +12,7 @@
 				<div class="board-head">
 					<div>
 						<h2>사내 주소록</h2>
-						<p class="board-desc">재직 중인 임직원 연락처입니다. 부서를 고르면 하위 부서 인원까지 보여줍니다.</p>
+						<p class="board-desc">재직 중인 임직원 연락처입니다. 왼쪽에서 부서를 고르거나 회사 전체에서 검색하세요.</p>
 					</div>
 				</div>
 
@@ -20,39 +20,44 @@
 				<div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
 
 				<form class="address-search" th:action="@{/address/company}" method="get">
-					<select name="dept" aria-label="부서">
-						<option value="">전체 부서</option>
-						<option th:each="d : ${departments}" th:value="${d.id}" th:text="${d.indentedName()}"
-						        th:selected="${d.id == dept}">개발본부</option>
-					</select>
-					<input type="search" name="q" th:value="${q}" placeholder="이름, 부서, 이메일, 전화번호">
+					<input type="search" name="q" th:value="${q}" placeholder="회사 전체에서 이름, 부서, 이메일, 전화번호 검색">
 					<button type="submit" class="btn-secondary">검색</button>
-					<span class="address-total" th:text="'총 ' + ${employees.totalElements} + '명'">총 0명</span>
+					<a class="btn-secondary" th:if="${searching}" th:href="@{/address/company}">검색 지우기</a>
 				</form>
 
-				<div class="board-panel">
+				<div class="org org-manage">
+					<section th:replace="~{fragments/org :: deptTree(${org.departments}, ${org.selectedId}, ${org.noDeptCount}, '/address/company')}"></section>
+
+					<section class="org-members">
+						<div class="org-members-head">
+							<h3 th:text="${org.title}">개발1팀</h3>
+							<span class="today" th:text="${#lists.size(org.members)} + '명'">0명</span>
+						</div>
 					<table class="post-table address-table">
 						<thead>
 						<tr>
 							<th class="col-name">이름</th>
 							<th class="col-grade">직급/직책</th>
-							<th class="col-dept">부서</th>
+							<th class="col-dept" th:if="${searching}">부서</th>
 							<th class="col-email">이메일</th>
 							<th class="col-phone">전화</th>
 							<th class="col-act"></th>
 						</tr>
 						</thead>
 						<tbody>
-						<tr th:each="e : ${employees.content}">
+						<tr th:each="e : ${org.members}">
 							<td class="col-name">
-								<span class="avatar avatar-sm" th:text="${#strings.substring(e.name, 0, 1)}">김</span>
+								<span class="avatar avatar-sm">
+									<img th:if="${e.photoUrl}" th:src="@{${e.photoUrl}}" alt="" loading="lazy">
+									<th:block th:unless="${e.photoUrl}" th:text="${e.initial()}">김</th:block>
+								</span>
 								<strong th:text="${e.name}">김도현</strong>
 							</td>
 							<td class="col-grade">
 								<span th:text="${e.gradeName} ?: '-'">과장</span>
 								<span class="duty-tag" th:if="${e.dutyName}" th:text="${e.dutyName}">팀장</span>
 							</td>
-							<td class="col-dept" th:text="${e.deptName} ?: '-'">개발1팀</td>
+							<td class="col-dept" th:if="${searching}" th:text="${e.deptName} ?: '-'">개발1팀</td>
 							<td class="col-email">
 								<a th:if="${e.email}" th:href="'mailto:' + ${e.email}" th:text="${e.email}">mail</a>
 								<span th:unless="${e.email}">-</span>
@@ -64,23 +69,17 @@
 							<td class="col-act">
 								<form th:action="@{/address/personal/add-employee}" method="post">
 									<input type="hidden" name="memberId" th:value="${e.memberId}">
-									<input type="hidden" name="back" th:value="@{/address/company(q=${q}, dept=${dept}, page=${employees.number + 1})}">
+									<input type="hidden" name="back" th:value="${searching} ? @{/address/company(q=${q})} : @{/address/company(dept=${org.selectedId})}">
 									<button type="submit" class="btn-link" title="개인 주소록에 추가">+ 내 주소록</button>
 								</form>
 							</td>
 						</tr>
 						</tbody>
 					</table>
-					<p th:if="${employees.empty}" class="empty post-empty">검색 결과가 없습니다.</p>
+					<p th:if="${#lists.isEmpty(org.members)}" class="empty post-empty"
+					   th:text="${searching} ? '검색 결과가 없습니다.' : '이 부서에 재직자가 없습니다.'">검색 결과가 없습니다.</p>
+					</section>
 				</div>
-
-				<nav class="pagination" th:if="${employees.totalPages > 1}">
-					<a th:if="${employees.hasPrevious()}" th:href="@{/address/company(q=${q}, dept=${dept}, page=${employees.number})}">‹</a>
-					<a th:each="n : ${#numbers.sequence(1, employees.totalPages)}" th:text="${n}"
-					   th:classappend="${n == employees.number + 1} ? 'current'"
-					   th:href="@{/address/company(q=${q}, dept=${dept}, page=${n})}">1</a>
-					<a th:if="${employees.hasNext()}" th:href="@{/address/company(q=${q}, dept=${dept}, page=${employees.number + 2})}">›</a>
-				</nav>
 			</section>
 		</div>
 	</main>

@@ -21,10 +21,13 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.validation.Valid;
 import th_prj.th_company.address.AddressService;
+import th_prj.th_company.address.AddressViews.Employee;
 import th_prj.th_company.address.AddressViews.GroupItem;
 import th_prj.th_company.address.AddressViews.PersonalNav;
 import th_prj.th_company.address.ContactForm;
 import th_prj.th_company.common.BusinessException;
+import th_prj.th_company.org.DeptView;
+import th_prj.th_company.org.OrgChartService;
 
 /**
  * 주소록. 좌측 메뉴: 사내 주소록 | 개인 주소록(전체, 즐겨찾기, 그룹별) | 그룹 관리.
@@ -34,9 +37,11 @@ import th_prj.th_company.common.BusinessException;
 public class AddressController {
 
 	private final AddressService addressService;
+	private final OrgChartService orgChartService;
 
-	public AddressController(AddressService addressService) {
+	public AddressController(AddressService addressService, OrgChartService orgChartService) {
 		this.addressService = addressService;
+		this.orgChartService = orgChartService;
 	}
 
 	@GetMapping
@@ -44,14 +49,16 @@ public class AddressController {
 		return "redirect:/address/company";
 	}
 
-	/** 사내 주소록. dept 를 고르면 그 부서와 하위 부서 인원 */
+	/** 사내 주소록. 조직도처럼 고른 부서 인원을 보여 주고, 검색어가 있으면 회사 전체에서 찾는다 */
 	@GetMapping("/company")
 	public String company(@RequestParam(required = false) String q, @RequestParam(required = false) Long dept,
-			@RequestParam(defaultValue = "1") int page, Authentication authentication, Model model) {
-		model.addAttribute("employees", addressService.employees(q, dept, page - 1));
-		model.addAttribute("departments", addressService.departments());
+			Authentication authentication, Model model) {
+		DeptView<Employee> view = orgChartService.deptView(addressService.directory(null), Employee::deptId, dept,
+			authentication.getName(), false);
+		boolean searching = q != null && !q.isBlank();
+		model.addAttribute("org", searching ? view.searchResult(addressService.directory(q)) : view);
+		model.addAttribute("searching", searching);
 		model.addAttribute("q", q);
-		model.addAttribute("dept", dept);
 		return nav("company", authentication, model, "address/company");
 	}
 

@@ -51,6 +51,25 @@
 				<p class="field-error" th:if="${#fields.hasErrors('startDate')}" th:errors="*{startDate}"></p>
 				<p class="field-error" th:if="${#fields.hasErrors('endDate')}" th:errors="*{endDate}"></p>
 
+				<label>참여자</label>
+				<div class="cc-row attendee-row">
+					<ul id="participantList" class="cc-inline">
+						<li th:each="a : ${selectedParticipants}"
+						    th:attr="data-id=${a.id},data-name=${a.name},data-grade=${a.grade},data-label=${a.label}">
+							<input type="hidden" name="participantIds" th:value="${a.id}">
+							<span class="line-name" th:text="${a.label}">홍길동</span>
+						</li>
+					</ul>
+					<span class="hint-inline" id="participantEmpty">지정한 참여자가 없습니다.</span>
+					<button type="button" class="btn-secondary" data-picker data-list="participantList" data-empty="participantEmpty"
+					        data-input="participantIds" th:attr="data-max=${maxParticipants}" data-title="참여자 지정"
+					        data-pane="참여자" data-tag="참여">참여자 지정</button>
+				</div>
+				<label class="check">
+					<input type="checkbox" th:field="*{notifyParticipants}"> 참여자에게 알림 보내기
+					<span class="hint-inline">이 일정을 보는 사람 모두에게 갑니다.</span>
+				</label>
+
 				<label for="description">내용</label>
 				<textarea th:field="*{description}" rows="5" maxlength="2000"></textarea>
 
@@ -64,6 +83,9 @@
 		</div>
 	</main>
 </div>
+<!-- 폼 밖에 둔다: 팝업의 검색칸에서 Enter 를 눌러도 일정이 저장되지 않게 -->
+<dialog th:replace="~{approval/fragments :: picker}"></dialog>
+<script th:src="@{/js/line-picker.js}"></script>
 <script>
 	// 종일이면 시간 입력 숨김, 시작일을 바꾸면 종료일이 더 빠르지 않게 맞춤
 	(function () {

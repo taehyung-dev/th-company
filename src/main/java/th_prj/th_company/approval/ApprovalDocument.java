@@ -78,6 +78,11 @@ public class ApprovalDocument {
 	@Column(nullable = false)
 	private boolean linked;
 
+	/** 재기안: 이 문서의 바탕이 된 반려 문서 */
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "redrafted_from_id")
+	private ApprovalDocument redraftedFrom;
+
 	/** 양식 입력 항목에 넣은 값 (항목 이름·종류를 함께 남긴다) */
 	@ElementCollection
 	@CollectionTable(name = "approval_document_field", joinColumns = @JoinColumn(name = "document_id"))
@@ -139,7 +144,12 @@ public class ApprovalDocument {
 		this.linked = true;
 	}
 
+	void redraftOf(ApprovalDocument origin) {
+		this.redraftedFrom = origin;
+	}
+
 	public boolean isLinked() { return linked; }
+	public ApprovalDocument getRedraftedFrom() { return redraftedFrom; }
 	public Long getId() { return id; }
 	public ApprovalTemplate getTemplate() { return template; }
 	public String getDocNo() { return docNo; }

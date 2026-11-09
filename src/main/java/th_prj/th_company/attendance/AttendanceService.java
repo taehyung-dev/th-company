@@ -131,8 +131,9 @@ public class AttendanceService {
 				.thenComparingInt(m -> m.getDuty() == null ? Integer.MAX_VALUE : m.getDuty().getSortOrder())
 				.thenComparingInt(m -> m.getGrade() == null ? Integer.MAX_VALUE : m.getGrade().getSortOrder())
 				.thenComparing(Member::getName))
-			.map(m -> new AttendanceBoard.Row(m.getId(), m.getName(), m.getDepartment().getName(),
+			.map(m -> new AttendanceBoard.Row(m.getId(), m.getName(), m.getDepartment().getId(), m.getDepartment().getName(),
 				m.getGrade() == null ? null : m.getGrade().getName(),
+				m.getDuty() == null ? null : m.getDuty().getName(), m.getPhotoUrl(),
 				day(d, records.get(m.getId()), today, joinDate(m), holiday, leaves.get(m.getId()))))
 			.toList();
 		return new AttendanceBoard(d, d.minusDays(1), d.equals(today) ? null : d.plusDays(1), rows);

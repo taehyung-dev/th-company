@@ -12,7 +12,7 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
 
 	/**
 	 * [from, to) 기간과 겹치고 사용자에게 보이는 일정.
-	 * 회사일정 전부 + 내 부서의 부서일정 + 내 개인일정.
+	 * 회사일정 전부 + 내 부서의 부서일정 + 내 개인일정 + 내가 참여자인 일정.
 	 */
 	@Query("""
 		select s from Schedule s
@@ -21,7 +21,8 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
 		where s.startAt < :to and s.endAt >= :from
 			and (s.type = th_prj.th_company.schedule.ScheduleType.COMPANY
 				or (s.type = th_prj.th_company.schedule.ScheduleType.DEPARTMENT and s.department.id = :deptId)
-				or (s.type = th_prj.th_company.schedule.ScheduleType.PERSONAL and s.owner.id = :memberId))
+				or (s.type = th_prj.th_company.schedule.ScheduleType.PERSONAL and s.owner.id = :memberId)
+				or exists (select p from s.participants p where p.id = :memberId))
 		order by s.allDay desc, s.startAt, s.id
 		""")
 	List<Schedule> findVisible(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to,

@@ -20,7 +20,7 @@ import th_prj.th_company.leave.LeaveService;
 import th_prj.th_company.leave.LeaveType;
 
 /**
- * 휴가 (근태관리 메뉴 안). 내 휴가와 신청은 누구나, /attendance/manage/leave 는 근태관리자와 관리자만.
+ * 휴가 (근태관리 메뉴 안). 내 휴가와 신청은 누구나. 전체 휴가 현황은 LeaveManageController.
  */
 @Controller
 @RequestMapping("/attendance")
@@ -76,43 +76,6 @@ public class LeaveController {
 			redirect.addFlashAttribute("error", e.getMessage());
 		}
 		return "redirect:/attendance/leave" + (year == null ? "" : "?year=" + year);
-	}
-
-	// ---------- 근태관리자 ----------
-
-	@GetMapping("/manage/leave")
-	public String manage(@RequestParam(required = false) Integer year, Model model) {
-		int y = year == null ? leaveService.currentYear() : year;
-		model.addAttribute("menu", "leave-manage");
-		model.addAttribute("year", y);
-		model.addAttribute("members", leaveService.memberRows(y));
-		model.addAttribute("requests", leaveService.allRequests(y));
-		return "attendance/leave-manage";
-	}
-
-	/** days 를 비우면 입사일 기준으로 되돌린다 */
-	@PostMapping("/manage/leave/grant")
-	public String grant(@RequestParam Long member, @RequestParam int year, @RequestParam(required = false) Double days,
-			RedirectAttributes redirect) {
-		try {
-			leaveService.setGranted(member, year, days);
-			redirect.addFlashAttribute("message", "연차 일수를 저장했습니다.");
-		} catch (BusinessException e) {
-			redirect.addFlashAttribute("error", e.getMessage());
-		}
-		return "redirect:/attendance/manage/leave?year=" + year;
-	}
-
-	@PostMapping("/manage/leave/{id}/cancel")
-	public String cancelByManager(@PathVariable Long id, @RequestParam int year, Authentication authentication,
-			RedirectAttributes redirect) {
-		try {
-			leaveService.cancelByManager(id, authentication.getName());
-			redirect.addFlashAttribute("message", "휴가를 취소했습니다.");
-		} catch (BusinessException e) {
-			redirect.addFlashAttribute("error", e.getMessage());
-		}
-		return "redirect:/attendance/manage/leave?year=" + year;
 	}
 
 	private String renderForm(Authentication authentication, Model model) {

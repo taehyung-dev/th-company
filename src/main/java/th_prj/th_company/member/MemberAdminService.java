@@ -7,11 +7,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import th_prj.th_company.approval.ApprovalService;
 import th_prj.th_company.common.BusinessException;
 import th_prj.th_company.org.DepartmentService;
 import th_prj.th_company.org.HrCode;
 import th_prj.th_company.org.HrCodeService;
 import th_prj.th_company.org.HrCodeType;
+import th_prj.th_company.org.OrgChartService;
 
 /**
  * 관리자 화면의 사용자(임직원) 관리.
@@ -24,18 +26,21 @@ public class MemberAdminService {
 	private final DepartmentService departmentService;
 	private final HrCodeService hrCodeService;
 	private final PasswordEncoder passwordEncoder;
+	private final ApprovalService approvalService;
 
 	public MemberAdminService(MemberRepository memberRepository, DepartmentService departmentService,
-			HrCodeService hrCodeService, PasswordEncoder passwordEncoder) {
+			HrCodeService hrCodeService, PasswordEncoder passwordEncoder, ApprovalService approvalService) {
 		this.memberRepository = memberRepository;
 		this.departmentService = departmentService;
 		this.hrCodeService = hrCodeService;
 		this.passwordEncoder = passwordEncoder;
+		this.approvalService = approvalService;
 	}
 
 	public List<MemberRow> search(String keyword, Long departmentId, Boolean enabled) {
 		String kw = keyword == null || keyword.isBlank() ? null : keyword.trim();
 		return memberRepository.search(kw, departmentId, enabled).stream()
+			.sorted(OrgChartService.MEMBER_ORDER)
 			.map(MemberRow::from)
 			.toList();
 	}
@@ -152,12 +157,26 @@ public class MemberAdminService {
 		if (m.getLoginId().equals(currentLoginId) && (!form.isEnabled() || form.getRole() != Role.ADMIN)) {
 			throw new BusinessException("본인 계정은 사용 중지하거나 관리자 권한을 해제할 수 없습니다.");
 		}
+		if (m.isEnabled() && !form.isEnabled()) {
+			requireNoWaitingApproval(m);
+		}
 
 		applyProfile(m, form, employeeNo);
 		m.changeAccess(form.getRole(), form.isEnabled());
 		if (!isBlank(form.getPassword())) {
 			m.changePassword(passwordEncoder.encode(form.getPassword()));
 		}
+	}
+
+	/** 결재자가 사용 중지되면 그 문서는 아무도 결재할 수 없어 멈춘다 */
+	private void requireNoWaitingApproval(Member m) {
+		List<String> docNos = approvalService.waitingDocNos(m.getId());
+		if (docNos.isEmpty()) {
+			return;
+		}
+		String sample = String.join(", ", docNos.subList(0, Math.min(docNos.size(), 3)));
+		throw new BusinessException(m.getName() + " 님의 결재를 기다리는 문서가 " + docNos.size() + "건 있어 사용 중지할 수 없습니다 ("
+			+ sample + (docNos.size() > 3 ? " 등" : "") + "). 결재를 끝내거나 기안자가 회수한 뒤 다시 시도하세요.");
 	}
 
 	private void applyProfile(Member m, MemberForm form, String employeeNo) {

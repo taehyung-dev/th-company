@@ -8,7 +8,7 @@
 		<div class="board-layout">
 			<nav th:replace="~{attendance/fragments :: nav}"></nav>
 
-			<section class="board-main">
+			<section class="board-main" th:fragment="manageContent">
 				<div class="board-head">
 					<div>
 						<h2>공휴일 관리</h2>
@@ -20,12 +20,12 @@
 				<div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
 
 				<div class="month-nav">
-					<a class="btn-secondary" th:href="@{/attendance/manage/holidays(year=${year - 1})}">‹ 이전 해</a>
+					<a class="btn-secondary" th:href="@{${base}(year=${year - 1})}">‹ 이전 해</a>
 					<strong th:text="${year} + '년'">2026년</strong>
-					<a class="btn-secondary" th:href="@{/attendance/manage/holidays(year=${year + 1})}">다음 해 ›</a>
+					<a class="btn-secondary" th:href="@{${base}(year=${year + 1})}">다음 해 ›</a>
 				</div>
 
-				<form class="board-panel inline-form" th:action="@{/attendance/manage/holidays}" th:object="${form}" method="post">
+				<form class="board-panel inline-form" th:action="@{${base}}" th:object="${form}" method="post">
 					<div>
 						<label for="date">날짜</label>
 						<input type="date" th:field="*{date}" required>
@@ -52,7 +52,7 @@
 								<span class="tag tag-muted" th:if="${h.weekend()}">주말</span>
 							</td>
 							<td class="col-act">
-								<form th:action="@{/attendance/manage/holidays/{id}/delete(id=${h.id})}" method="post"
+								<form th:action="@{|${base}/${h.id}/delete|}" method="post"
 								      th:attr="data-confirm=${h.name} + ' 공휴일을 삭제할까요?'" onsubmit="return confirm(this.dataset.confirm)">
 									<input type="hidden" name="year" th:value="${year}">
 									<button type="submit" class="btn-link danger">삭제</button>
@@ -66,7 +66,7 @@
 					</table>
 				</div>
 
-				<form class="holiday-fixed" th:action="@{/attendance/manage/holidays/fixed}" method="post">
+				<form class="holiday-fixed" th:action="@{|${base}/fixed|}" method="post">
 					<input type="hidden" name="year" th:value="${year}">
 					<button type="submit" class="btn-secondary" th:text="${year} + '년 양력 공휴일 넣기'">2026년 양력 공휴일 넣기</button>
 					<span class="hint-inline">신정, 삼일절, 어린이날, 현충일, 광복절, 개천절, 한글날, 성탄절을 넣습니다. 설날, 추석, 부처님오신날, 대체공휴일은 직접 추가하세요.</span>

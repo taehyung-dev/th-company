@@ -20,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.validation.Valid;
+import th_prj.th_company.approval.ApprovalService;
 import th_prj.th_company.common.BusinessException;
 import th_prj.th_company.common.SecurityUtils;
 import th_prj.th_company.member.Permission;
@@ -36,9 +37,11 @@ import th_prj.th_company.schedule.ScheduleType;
 public class ScheduleController {
 
 	private final ScheduleService scheduleService;
+	private final ApprovalService approvalService;
 
-	public ScheduleController(ScheduleService scheduleService) {
+	public ScheduleController(ScheduleService scheduleService, ApprovalService approvalService) {
 		this.scheduleService = scheduleService;
+		this.approvalService = approvalService;
 	}
 
 	/** @param ym 예: 2026-10. 없거나 잘못되면 이번 달 */
@@ -107,6 +110,9 @@ public class ScheduleController {
 		model.addAttribute("files", form.getId() == null ? List.of() : scheduleService.files(form.getId()));
 		model.addAttribute("allowedTypes",
 			scheduleService.allowedTypes(authentication.getName(), SecurityUtils.can(authentication, Permission.SCHEDULE_MANAGER)));
+		model.addAttribute("approverGroups", approvalService.approverGroups(authentication.getName()));
+		model.addAttribute("selectedParticipants", approvalService.approverLabels(form.getParticipantIds()));
+		model.addAttribute("maxParticipants", ScheduleService.MAX_PARTICIPANTS);
 		return "schedule/form";
 	}
 }

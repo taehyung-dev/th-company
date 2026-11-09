@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -17,10 +18,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.validation.Valid;
-import th_prj.th_company.address.AddressService;
+import th_prj.th_company.attendance.AttendanceBoard;
 import th_prj.th_company.attendance.AttendanceEditForm;
 import th_prj.th_company.attendance.AttendanceService;
 import th_prj.th_company.common.BusinessException;
+import th_prj.th_company.common.XlsxWriter;
+import th_prj.th_company.org.OrgChartService;
 
 /**
  * 근태관리. 내 근태는 누구나, 전체 근태 현황과 정정(/attendance/manage/**)은 근태관리자와 관리자만
@@ -31,11 +34,11 @@ import th_prj.th_company.common.BusinessException;
 public class AttendanceController {
 
 	private final AttendanceService attendanceService;
-	private final AddressService addressService;
+	private final OrgChartService orgChartService;
 
-	public AttendanceController(AttendanceService attendanceService, AddressService addressService) {
+	public AttendanceController(AttendanceService attendanceService, OrgChartService orgChartService) {
 		this.attendanceService = attendanceService;
-		this.addressService = addressService;
+		this.orgChartService = orgChartService;
 	}
 
 	/** 내 근태 (월별). month=2026-10 */
@@ -64,16 +67,32 @@ public class AttendanceController {
 
 	// ---------- 근태관리자 ----------
 
-	/** 하루 전체 근태 현황 */
+	/** 하루 전체 근태 현황. 위 요약은 회사 전체, 아래 목록은 조직도처럼 고른 부서 */
 	@GetMapping("/manage")
 	public String manage(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-			@RequestParam(required = false) Long dept, Model model) {
+			@RequestParam(required = false) Long dept, Authentication authentication, Model model) {
+		AttendanceBoard board = attendanceService.board(date, null);
 		model.addAttribute("menu", "manage");
-		model.addAttribute("board", attendanceService.board(date, dept));
-		model.addAttribute("departments", addressService.departments());
-		model.addAttribute("dept", dept);
+		model.addAttribute("board", board);
+		model.addAttribute("org", orgChartService.deptView(board.rows(), AttendanceBoard.Row::deptId, dept,
+			authentication.getName()));
 		addRules(model);
 		return "attendance/manage";
+	}
+
+	/** 그날 전체 근태 현황을 회사 전체(부서 순서)로 내려받는다 */
+	@GetMapping("/manage/excel")
+	public ResponseEntity<byte[]> manageExcel(
+			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+		AttendanceBoard board = attendanceService.board(date, null);
+		XlsxWriter x = new XlsxWriter();
+		XlsxWriter.Sheet s = x.sheet(board.date().toString(), 16, 10, 9, 9, 8, 8, 10, 22);
+		s.header("부서", "이름", "직급", "직책", "출근", "퇴근", "근무시간", "상태");
+		for (AttendanceBoard.Row r : board.rows()) {
+			s.row(r.deptName(), r.name(), r.gradeName(), r.dutyName(), r.day().displayCheckIn(), r.day().displayCheckOut(),
+				r.day().displayWorked(), r.day().statusText());
+		}
+		return x.download("전체근태현황_" + board.date() + ".xlsx");
 	}
 
 	/** 직원 한 명의 월별 근태 */

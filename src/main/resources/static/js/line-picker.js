@@ -1,19 +1,28 @@
 // 결재선·참조자 지정 팝업 (approval/fragments :: picker).
 // [data-picker] 버튼마다 대상 목록이 다르다: data-list(목록 id), data-empty(안내 id), data-input(hidden 이름),
-// data-max, data-title, data-ordered(결재 순서가 있는지), data-stamp(결재란 표 id, 선택).
+// data-max, data-title, data-ordered(결재 순서가 있는지), data-stamp(결재란 표 id, 선택),
+// data-pane(오른쪽 목록 이름, 선택), data-tag(사람 앞에 붙는 표시, 선택).
 // 열 때 대상 목록을 복사해 오고, [확인]하면 대상 목록을 다시 만든다. [취소]는 변경을 버린다.
 // 대상 목록과 hidden 값은 결재 순서(1차가 처음)이고, 팝업의 오른쪽 목록만 높은 사람이 위로 가도록 거꾸로 보여 준다.
 
-// 결재란 표의 결재자 칸을 목록(결재 순서) 대로 다시 만든다. 값은 textContent 로만 넣는다
-function renderLineStamp(table, list) {
+// 결재선의 방식 (LineType). 값이 없으면 결재
+var LINE_TYPES = [['APPROVAL', '결재'], ['AGREE_SEQ', '합의(순차)'], ['AGREE_PAR', '합의(병렬)']];
+
+function lineKind(li) {
+	return li.dataset.kind || 'APPROVAL';
+}
+
+// 결재란(결재자)과 합의란(합의자)을 목록(결재 순서) 대로 다시 만든다. 합의란 표 id 는 결재란 id + 'Agree'.
+// keep: 지우지 않고 둘 앞 칸 수 (결재란은 '결재' 머리와 기안자 칸). 값은 textContent 로만 넣는다
+function fillStamp(table, items, keep) {
 	var grades = table.rows[0], names = table.rows[1], dates = table.rows[2];
-	while (grades.cells.length > 2) grades.deleteCell(-1);
-	while (names.cells.length > 1) names.deleteCell(-1);
-	while (dates.cells.length > 1) dates.deleteCell(-1);
-	Array.prototype.forEach.call(list.children, function (li, i) {
+	while (grades.cells.length > keep + 1) grades.deleteCell(-1);
+	while (names.cells.length > keep) names.deleteCell(-1);
+	while (dates.cells.length > keep) dates.deleteCell(-1);
+	items.forEach(function (li, i) {
 		var grade = grades.insertCell(-1);
 		grade.className = 'stamp-grade';
-		grade.textContent = li.dataset.grade || (i + 1) + '차';
+		grade.textContent = (li.dataset.grade || (i + 1) + '차') + (lineKind(li) === 'AGREE_PAR' ? ' ∥' : '');
 		var box = names.insertCell(-1);
 		box.className = 'stamp-box';
 		var name = document.createElement('span');
@@ -22,6 +31,17 @@ function renderLineStamp(table, list) {
 		box.appendChild(name);
 		dates.insertCell(-1).className = 'stamp-date';
 	});
+}
+
+function renderLineStamp(table, list) {
+	var items = Array.prototype.slice.call(list.children);
+	fillStamp(table, items.filter(function (li) { return lineKind(li) === 'APPROVAL'; }), 1);
+	var agree = document.getElementById(table.id + 'Agree');
+	if (agree) {
+		var agreeing = items.filter(function (li) { return lineKind(li) !== 'APPROVAL'; });
+		fillStamp(agree, agreeing, 0);
+		agree.hidden = !agreeing.length;
+	}
 }
 
 (function () {
@@ -39,7 +59,8 @@ function renderLineStamp(table, list) {
 	var dragged = null;       // 끌고 있는 li (조직도의 사람 또는 오른쪽 목록의 사람)
 
 	function person(el) {
-		return { id: el.dataset.id, name: el.dataset.name, grade: el.dataset.grade || '', label: el.dataset.label };
+		return { id: el.dataset.id, name: el.dataset.name, grade: el.dataset.grade || '', label: el.dataset.label,
+			kind: el.dataset.kind || 'APPROVAL' };
 	}
 
 	function refreshEmpty(list, empty) {
@@ -115,8 +136,30 @@ function renderLineStamp(table, list) {
 		li.dataset.name = p.name;
 		li.dataset.grade = p.grade;
 		li.dataset.label = p.label;
+		li.dataset.kind = p.kind;
 		li.draggable = true;
-		li.textContent = p.label;
+		var text = document.createElement('span');
+		text.className = 'pick-line-name';
+		text.textContent = p.label;
+		li.appendChild(text);
+		if (target.ordered) {
+			// 결재 / 합의(순차) / 합의(병렬)
+			var kind = document.createElement('select');
+			kind.className = 'line-kind';
+			kind.setAttribute('aria-label', '결재 방식');
+			LINE_TYPES.forEach(function (t) {
+				var o = document.createElement('option');
+				o.value = t[0];
+				o.textContent = t[1];
+				kind.appendChild(o);
+			});
+			kind.value = p.kind;
+			kind.addEventListener('change', function () {
+				li.dataset.kind = kind.value;
+				refreshLine();
+			});
+			li.appendChild(kind);
+		}
 		var remove = document.createElement('button');
 		remove.type = 'button';
 		remove.className = 'btn-link danger';
@@ -129,10 +172,23 @@ function renderLineStamp(table, list) {
 	function refreshLine() {
 		document.getElementById('pickCount').textContent = line.children.length + '명 / 최대 ' + target.max + '명';
 		document.getElementById('pickEmpty').style.display = line.children.length ? 'none' : '';
-		var count = line.children.length;
-		Array.prototype.forEach.call(line.children, function (li, i) {
-			li.dataset.step = target.ordered ? (count - i) + '차' : '참조';
-		});
+		if (!target.ordered) {
+			Array.prototype.forEach.call(line.children, function (li) { li.dataset.step = target.tag; });
+		} else {
+			// 처리 순서(아래부터)로 단계를 매긴다. 이어진 합의(병렬)는 같은 단계
+			var items = Array.prototype.slice.call(line.children).reverse();
+			var stage = 0, prev = null, stages = [];
+			items.forEach(function (li) {
+				var kind = lineKind(li);
+				if (!(kind === 'AGREE_PAR' && prev === 'AGREE_PAR')) stage++;
+				stages.push(stage);
+				prev = kind;
+			});
+			items.forEach(function (li, i) {
+				var shared = stages.filter(function (s) { return s === stages[i]; }).length > 1;
+				li.dataset.step = stages[i] + '차' + (lineKind(li) === 'APPROVAL' ? '' : shared ? ' 병렬' : ' 합의');
+			});
+		}
 		refreshOrg();
 	}
 
@@ -292,10 +348,10 @@ function renderLineStamp(table, list) {
 		button.addEventListener('click', function () {
 			target = {
 				list: list, empty: empty, input: button.dataset.input, max: parseInt(button.dataset.max, 10),
-				ordered: button.dataset.ordered === 'true', stamp: stamp
+				ordered: button.dataset.ordered === 'true', stamp: stamp, tag: button.dataset.tag || '참조'
 			};
 			title.textContent = button.dataset.title;
-			paneTitle.textContent = target.ordered ? '결재선' : '참조자';
+			paneTitle.textContent = target.ordered ? '결재선' : button.dataset.pane || '참조자';
 			order.style.display = target.ordered ? '' : 'none';
 			document.getElementById('pickOrderHint').style.display = target.ordered ? '' : 'none';
 			line.innerHTML = '';
@@ -330,6 +386,14 @@ function renderLineStamp(table, list) {
 			name.className = 'line-name';
 			name.textContent = p.label;
 			li.appendChild(input);
+			if (target.ordered) {
+				li.dataset.kind = p.kind;
+				var type = document.createElement('input');
+				type.type = 'hidden';
+				type.name = 'lineTypes';
+				type.value = p.kind;
+				li.appendChild(type);
+			}
 			li.appendChild(name);
 			target.list.appendChild(li);
 		});

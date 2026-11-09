@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /**
- * 기안 작성/수정 폼. 결재선은 approverIds 순서대로 1단계부터.
+ * 기안 작성/수정 폼. 결재선은 approverIds 순서대로 1단계부터. lineTypes 는 같은 순서의 방식 (LineType, 없으면 결재).
  * 제목/본문/결재선 필수 여부는 상신할 때만 검사한다 (임시저장은 비어 있어도 됨).
  */
 public class DraftForm {
@@ -24,6 +24,8 @@ public class DraftForm {
 	private String content;
 
 	private List<Long> approverIds = new ArrayList<>();
+
+	private List<String> lineTypes = new ArrayList<>();
 
 	/** 양식 입력 항목 값. 양식의 항목 순서대로 */
 	private List<String> fieldValues = new ArrayList<>();
@@ -48,6 +50,8 @@ public class DraftForm {
 	public void setContent(String content) { this.content = content; }
 	public List<Long> getApproverIds() { return approverIds; }
 	public void setApproverIds(List<Long> approverIds) { this.approverIds = approverIds; }
+	public List<String> getLineTypes() { return lineTypes; }
+	public void setLineTypes(List<String> lineTypes) { this.lineTypes = lineTypes; }
 	public List<String> getFieldValues() { return fieldValues; }
 	public void setFieldValues(List<String> fieldValues) { this.fieldValues = fieldValues; }
 }

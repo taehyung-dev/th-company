@@ -39,6 +39,17 @@ public class ScheduleForm {
 	@DateTimeFormat(iso = DateTimeFormat.ISO.TIME)
 	private LocalTime endTime;
 
+	/** 참여자 */
+	private java.util.List<Long> participantIds = new java.util.ArrayList<>();
+
+	/** 저장할 때 참여자에게 알림을 보낸다 */
+	private boolean notifyParticipants;
+
+	public java.util.List<Long> getParticipantIds() { return participantIds; }
+	public void setParticipantIds(java.util.List<Long> participantIds) { this.participantIds = participantIds; }
+	public boolean isNotifyParticipants() { return notifyParticipants; }
+	public void setNotifyParticipants(boolean notifyParticipants) { this.notifyParticipants = notifyParticipants; }
+
 	/** 저장할 때 지울 첨부파일 */
 	private java.util.List<Long> deleteFileIds = new java.util.ArrayList<>();
 

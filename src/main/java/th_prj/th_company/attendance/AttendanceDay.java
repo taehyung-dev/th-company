@@ -85,6 +85,12 @@ public record AttendanceDay(LocalDate date, LocalDateTime checkInAt, LocalDateTi
 		return state == State.WORKED ? AttendanceMonth.hoursMinutes(workedMinutes()) : "";
 	}
 
+	/** 엑셀용 상태 글자: 화면의 태그를 이어 붙인다 */
+	public String statusText() {
+		String text = String.join(", ", tags().stream().map(Tag::text).toList());
+		return isCorrected() ? text + (text.isEmpty() ? "" : ", ") + "정정" : text;
+	}
+
 	public List<Tag> tags() {
 		List<Tag> tags = new ArrayList<>();
 		if (leave != null) {

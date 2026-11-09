@@ -29,7 +29,7 @@ public class Notification {
 	@JoinColumn(name = "recipient_id", nullable = false)
 	private Member recipient;
 
-	/** 결재, 휴가, 예약, 게시판 */
+	/** 결재, 휴가, 예약, 일정, 게시판 */
 	@Column(nullable = false, length = 20)
 	private String category;
 

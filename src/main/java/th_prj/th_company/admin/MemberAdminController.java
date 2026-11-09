@@ -1,5 +1,7 @@
 package th_prj.th_company.admin;
 
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -21,11 +23,14 @@ import th_prj.th_company.common.BusinessException;
 import th_prj.th_company.member.DuplicateValueException;
 import th_prj.th_company.member.MemberAdminService;
 import th_prj.th_company.member.MemberForm;
+import th_prj.th_company.member.MemberRow;
 import th_prj.th_company.member.ProfilePhotoService;
 import th_prj.th_company.member.Role;
 import th_prj.th_company.org.DepartmentService;
+import th_prj.th_company.org.DeptView;
 import th_prj.th_company.org.HrCodeService;
 import th_prj.th_company.org.HrCodeType;
+import th_prj.th_company.org.OrgChartService;
 
 @Controller
 @RequestMapping("/admin/members")
@@ -37,33 +42,41 @@ public class MemberAdminController {
 	private final DepartmentService departmentService;
 	private final HrCodeService hrCodeService;
 	private final ProfilePhotoService profilePhotoService;
+	private final OrgChartService orgChartService;
 
 	public MemberAdminController(MemberAdminService memberAdminService, DepartmentService departmentService,
-			HrCodeService hrCodeService, ProfilePhotoService profilePhotoService) {
+			HrCodeService hrCodeService, ProfilePhotoService profilePhotoService,
+			OrgChartService orgChartService) {
 		this.memberAdminService = memberAdminService;
 		this.departmentService = departmentService;
 		this.hrCodeService = hrCodeService;
 		this.profilePhotoService = profilePhotoService;
+		this.orgChartService = orgChartService;
 	}
 
 	/**
+	 * 조직도처럼 부서를 고르면 그 부서 사람이 보인다. 검색어가 있으면 부서와 상관없이 회사 전체에서 찾는다.
+	 *
 	 * @param status active(재직) / inactive(사용 중지) / 빈 값(전체)
 	 */
 	@GetMapping
 	public String list(@RequestParam(required = false) String q,
 			@RequestParam(required = false) Long dept,
 			@RequestParam(required = false, defaultValue = "") String status,
-			Model model) {
+			Authentication authentication, Model model) {
 		Boolean enabled = switch (status) {
 			case "active" -> true;
 			case "inactive" -> false;
 			default -> null;
 		};
 		model.addAttribute("menu", "members");
-		model.addAttribute("members", memberAdminService.search(q, dept, enabled));
-		model.addAttribute("departments", departmentService.tree());
+		List<MemberRow> all = memberAdminService.search(null, null, enabled);
+		DeptView<MemberRow> view = orgChartService.deptView(all, MemberRow::departmentId, dept, authentication.getName());
+		boolean searching = q != null && !q.isBlank();
+		model.addAttribute("org", searching ? view.searchResult(memberAdminService.search(q, null, enabled)) : view);
+		model.addAttribute("searching", searching);
+		model.addAttribute("total", all.size());
 		model.addAttribute("q", q);
-		model.addAttribute("dept", dept);
 		model.addAttribute("status", status);
 		return "admin/members";
 	}

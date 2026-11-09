@@ -51,6 +51,19 @@ public class FileStorage {
 		return storedName;
 	}
 
+	/** 같은 내용의 새 파일을 만든다 (문서마다 첨부파일을 따로 지울 수 있게) */
+	public String copy(String storedName) {
+		String copied = newName();
+		Path target = resolve(copied);
+		try {
+			Files.createDirectories(target.getParent());
+			Files.copy(resolve(storedName), target);
+		} catch (IOException e) {
+			throw new UncheckedIOException("첨부파일 복사 실패", e);
+		}
+		return copied;
+	}
+
 	private static String newName() {
 		YearMonth ym = YearMonth.now();
 		return "%d/%02d/%s".formatted(ym.getYear(), ym.getMonthValue(), UUID.randomUUID());

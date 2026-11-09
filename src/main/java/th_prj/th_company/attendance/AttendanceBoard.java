@@ -12,7 +12,13 @@ public record AttendanceBoard(LocalDate date, LocalDate prev, LocalDate next, Li
 
 	private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy년 M월 d일 (E)", Locale.KOREAN);
 
-	public record Row(Long memberId, String name, String deptName, String gradeName, AttendanceDay day) {
+	/** deptId 로 조직도처럼 부서별로 나눈다 */
+	public record Row(Long memberId, String name, Long deptId, String deptName, String gradeName, String dutyName,
+			String photoUrl, AttendanceDay day) {
+
+		public String initial() {
+			return name == null || name.isEmpty() ? "?" : name.substring(0, 1);
+		}
 	}
 
 	public String displayDate() {

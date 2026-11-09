@@ -41,6 +41,12 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 		""")
 	List<Member> findActiveWithDepartment();
 
+	/** 일정 알림 대상: 재직 인원 전체 */
+	List<Member> findByEnabledTrue();
+
+	/** 일정 알림 대상: 부서의 재직 인원 */
+	List<Member> findByDepartmentIdAndEnabledTrue(Long departmentId);
+
 	/** 권한 관리 화면: 관리 권한이 하나라도 있는 사용자 */
 	@Query("""
 		select distinct m from Member m

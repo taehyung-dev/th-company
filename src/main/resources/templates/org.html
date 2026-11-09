@@ -21,16 +21,7 @@
 
 		<div class="org">
 			<!-- 좌측: 부서 트리 -->
-			<section class="org-tree">
-				<a th:each="d : ${org.departments}"
-				   th:href="@{/org(dept=${d.id})}"
-				   th:classappend="${org.selected != null and d.id == org.selected.id} ? 'active'"
-				   th:style="'padding-left:' + ${12 + d.depth * 16} + 'px'">
-					<span class="org-tree-name" th:text="${d.name}">개발본부</span>
-					<span class="org-tree-count" th:if="${d.memberCount > 0}" th:text="${d.memberCount}">0</span>
-				</a>
-				<p class="empty org-empty" th:if="${#lists.isEmpty(org.departments)}">등록된 부서가 없습니다.</p>
-			</section>
+			<section th:replace="~{fragments/org :: deptTree(${org.departments}, ${org.selected?.id}, 0, '/org')}"></section>
 
 			<!-- 우측: 선택 부서에 직접 소속된 인원 -->
 			<section class="org-members" th:if="${org.selected != null}">
