@@ -1157,6 +1157,8 @@ a.btn-primary, a.btn-secondary { display: inline-block; text-decoration: none; }
 .doc-toolbar form { margin: 0; }
 .doc-toolbar .decide-bar { margin: 0 0 0 auto; }
 
+/* [PDF 저장] 하는 동안: 화면용 그림자와 A4 최소 높이를 뺀다 */
+.a4-sheet.pdf-capture { min-height: 0; box-shadow: none; border: none; }
 .excel-btn { margin-left: auto; white-space: nowrap; }
 
 /* 결재란과 합의란 */
