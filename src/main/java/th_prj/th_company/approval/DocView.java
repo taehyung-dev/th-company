@@ -13,6 +13,7 @@ import java.util.List;
  * @param canWithdraw 기안자이고 아직 아무도 승인하지 않음
  * @param canEdit     보관함 문서의 기안자
  * @param canFinalApprove 전결할 수 있음 (뒤에 결재자가 남아 있고 본인 차례)
+ * @param agreeing    내 차례가 합의라서 [합의]/[반려] 버튼을 보여 준다
  * @param deputyFor   내가 대결로 결재하면 원 결재자 이름, 아니면 null
  * @param ccNames     참조자
  * @param canRedraft  반려된 내 문서라서 재기안할 수 있음
@@ -24,7 +25,7 @@ public record DocView(Long id, String docNo, String templateName, String title, 
 		DocStatus status, LocalDateTime submittedAt, LocalDateTime completedAt,
 		List<LineView> lines, boolean canDecide, boolean canWithdraw, boolean canEdit,
 		boolean canFinalApprove, String deputyFor, List<String> ccNames,
-		boolean canRedraft, String originDocNo, Long originId) {
+		boolean canRedraft, String originDocNo, Long originId, boolean agreeing) {
 
 	static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm");
 	static final DateTimeFormatter SHORT = DateTimeFormatter.ofPattern("MM.dd HH:mm");
@@ -44,11 +45,55 @@ public record DocView(Long id, String docNo, String templateName, String title, 
 		return reversed;
 	}
 
+	/** 결재란에 들어갈 결재자 */
+	public List<LineView> approvalLines() {
+		return lines.stream().filter(l -> l.kind() == LineKind.APPROVAL).toList();
+	}
+
+	/** 합의란에 들어갈 합의자 */
+	public List<LineView> agreementLines() {
+		return lines.stream().filter(l -> l.kind() == LineKind.AGREEMENT).toList();
+	}
+
+	/**
+	 * @param stage    처리 차례. 같은 stage 는 동시에 처리한다
+	 * @param parallel 같은 stage 에 다른 사람이 있음 (병렬 합의)
+	 */
 	public record LineView(int step, String approverName, String deptName, String gradeName,
-			LineStatus status, String comment, LocalDateTime actedAt, String actedByName, boolean finalApproval) {
+			LineStatus status, String comment, LocalDateTime actedAt, String actedByName, boolean finalApproval,
+			LineKind kind, int stage, boolean parallel) {
 
 		public String displayActedAt() {
 			return actedAt == null ? "" : actedAt.format(SHORT);
+		}
+
+		public boolean agreement() {
+			return kind == LineKind.AGREEMENT;
+		}
+
+		/** 합의자는 승인 대신 합의, 결재중 대신 합의중 */
+		public String statusLabel() {
+			if (kind != LineKind.AGREEMENT) {
+				return status.getLabel();
+			}
+			return switch (status) {
+				case APPROVED -> "합의";
+				case PENDING -> "합의중";
+				default -> status.getLabel();
+			};
+		}
+
+		/** 결재란 도장 글자 */
+		public String stampText() {
+			if (kind == LineKind.AGREEMENT) {
+				return actedByName != null ? "대리합의" : "합의";
+			}
+			return finalApproval ? "전결" : actedByName != null ? "대결" : "승인";
+		}
+
+		/** 단계 이름: 1차, 병렬 합의는 "2차 병렬" */
+		public String stageLabel() {
+			return stage + "차" + (parallel ? " 병렬" : "");
 		}
 	}
 }

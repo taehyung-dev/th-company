@@ -28,12 +28,13 @@
 					<div class="doc-top">
 						<h2 class="doc-form-name" th:text="${template.name}">품의서</h2>
 						<div class="stamp-area">
-							<table th:replace="~{approval/fragments :: draftStamp('approverStamp')}"></table>
+							<div th:replace="~{approval/fragments :: draftStamp('approverStamp')}"></div>
 							<!-- 결재 순서대로 담아 두는 곳. 화면에는 결재란으로 보인다 -->
 							<ol id="approverList" hidden>
-								<li th:each="a : ${selectedApprovers}"
-								    th:attr="data-id=${a.id},data-name=${a.name},data-grade=${a.grade},data-label=${a.label}">
+								<li th:each="s : ${selectedLine}" th:with="a=${s.person}"
+								    th:attr="data-id=${a.id},data-name=${a.name},data-grade=${a.grade},data-label=${a.label},data-kind=${s.type.name()}">
 									<input type="hidden" name="approverIds" th:value="${a.id}">
+									<input type="hidden" name="lineTypes" th:value="${s.type.name()}">
 									<span class="line-name" th:text="${a.label}">홍길동</span>
 								</li>
 							</ol>
@@ -148,7 +149,7 @@
 					<article class="doc a4-sheet">
 						<div class="doc-top">
 							<h2 class="doc-form-name" th:text="${template.name}">품의서</h2>
-							<table th:replace="~{approval/fragments :: draftStamp('pvStamp')}"></table>
+							<div th:replace="~{approval/fragments :: draftStamp('pvStamp')}"></div>
 						</div>
 						<table class="doc-info">
 							<tr>

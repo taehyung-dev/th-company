@@ -16,15 +16,16 @@
 			</thead>
 			<tbody>
 			<tr th:each="l : ${d.linesTopDown()}">
-				<td class="status-step" th:text="${l.step} + '차'">1차</td>
+				<td class="status-step" th:text="${l.stageLabel()}">1차</td>
 				<td>
+					<span class="tag tag-agree" th:if="${l.agreement()}">합의</span>
 					<span th:text="${l.approverName}">김팀장</span>
 					<span class="muted" th:text="${l.gradeName}">팀장</span>
 					<span class="tag tag-info" th:if="${l.finalApproval}">전결</span>
 					<span class="tag tag-info" th:if="${l.actedByName}" th:text="'대결 ' + ${l.actedByName}">대결</span>
 				</td>
 				<td class="status-state">
-					<span class="doc-status" th:classappend="'line-' + ${#strings.toLowerCase(l.status.name())}" th:text="${l.status.label}">대기</span>
+					<span class="doc-status" th:classappend="'line-' + ${#strings.toLowerCase(l.status.name())}" th:text="${l.statusLabel()}">대기</span>
 				</td>
 				<td class="status-when" th:text="${l.displayActedAt()}">10.23 10:00</td>
 				<td class="status-comment" th:text="${l.comment}">의견</td>

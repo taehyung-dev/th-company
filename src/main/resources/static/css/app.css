@@ -1156,6 +1156,11 @@ a.btn-primary, a.btn-secondary { display: inline-block; text-decoration: none; }
 
 .excel-btn { margin-left: auto; white-space: nowrap; }
 
+/* 결재란과 합의란 */
+.stamp-tables { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; max-width: 100%; }
+.tag-agree { background: #fff4e5; color: #b45309; }
+.pick-line-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick-line .line-kind { flex: none; padding: 2px 4px; border: 1px solid var(--border); border-radius: 4px; font: inherit; font-size: 12px; background: var(--surface); }
 .doc-preview { width: min(calc(210mm + 50px), calc(100vw - 32px)); background: var(--bg); }
 .doc-preview .a4-sheet { width: auto; max-width: 210mm; margin: 16px auto; }
 

@@ -12,6 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -48,7 +49,9 @@ import th_prj.th_company.org.DepartmentService;
  *   <li>참조자: 결재하지 않고 상신된 문서를 볼 수 있다 (참조문서함).</li>
  *   <li>대결: 결재자가 지정해 둔 대결자가 그 기간에 대신 승인·반려한다. 원 결재자도 그대로 결재할 수 있다.
  *       자기가 기안한 문서는 대결할 수 없다.</li>
- *   <li>전결: 결재자 본인이 자기 단계에서 문서를 최종 승인한다. 뒤 단계는 SKIPPED. 대결자는 전결할 수 없다.</li>
+ *   <li>전결: 결재자 본인이 자기 단계에서 문서를 최종 승인한다. 뒤 단계는 SKIPPED. 대결자와 합의자는 전결할 수 없다.</li>
+ *   <li>합의: 결재선 중간에 합의자를 둔다. 순차 합의는 한 사람씩, 병렬 합의는 이어진 합의자들이 동시에 합의하고
+ *       모두 합의해야 다음 단계로 넘어간다. 합의자가 반려하면 문서가 반려된다. 최종 결재자는 합의자일 수 없다.</li>
  * </ul>
  */
 @Service
@@ -104,10 +107,12 @@ public class ApprovalService {
 			case DRAFTS -> documentRepository.findDrafts(me, DocStatus.DRAFT, pageable);
 		};
 
+		// 병렬 합의 중이면 차례인 사람이 여럿이다
 		Map<Long, String> currentApprovers = docs.isEmpty() ? Map.of()
 			: lineRepository.findByDocuments(docs.map(ApprovalDocument::getId).toList()).stream()
 				.filter(l -> l.getStatus() == LineStatus.PENDING)
-				.collect(Collectors.toMap(l -> l.getDocument().getId(), l -> l.getApprover().getName(), (a, b) -> a));
+				.collect(Collectors.groupingBy(l -> l.getDocument().getId(),
+					Collectors.mapping(l -> l.getApprover().getName(), Collectors.joining(", "))));
 
 		return docs.map(d -> new DocRow(d.getId(), d.getDocNo(), d.getTemplate().getName(), d.getTitle(),
 			d.getDrafter().getName(), dateFor(box, d), d.getStatus(), currentApprovers.get(d.getId())));
@@ -248,7 +253,9 @@ public class ApprovalService {
 		d.getFields().forEach(v -> saved.putIfAbsent(v.getLabel(), v.getValue()));
 		form.setFieldValues(new ArrayList<>(d.getTemplate().getFields().stream()
 			.map(f -> saved.getOrDefault(f.getLabel(), "")).toList()));
-		form.setApproverIds(lineRepository.findByDocument(docId).stream().map(l -> l.getApprover().getId()).toList());
+		List<ApprovalLine> lines = lineRepository.findByDocument(docId);
+		form.setApproverIds(lines.stream().map(l -> l.getApprover().getId()).toList());
+		form.setLineTypes(lineTypes(lines));
 		form.setCcIds(ccRepository.findByDocument(docId).stream().map(c -> c.getMember().getId()).toList());
 		return form;
 	}
@@ -307,7 +314,39 @@ public class ApprovalService {
 		d.complete(DocStatus.CANCELED);
 	}
 
-	/** 문서번호를 매기고 결재선 1단계를 결재 차례로 만든다 */
+	/** 저장된 결재선을 화면의 방식으로 되돌린다. 같은 단계에 합의자가 둘 이상이면 병렬 */
+	private static List<String> lineTypes(List<ApprovalLine> lines) {
+		return lines.stream().map(l -> {
+			if (!l.isAgreement()) {
+				return LineType.APPROVAL.name();
+			}
+			boolean parallel = lines.stream().anyMatch(o -> o != l && o.getStage() == l.getStage());
+			return (parallel ? LineType.AGREE_PAR : LineType.AGREE_SEQ).name();
+		}).toList();
+	}
+
+	/** 결재선 화면 표시용: 사람과 방식을 함께 (지정한 순서 유지) */
+	public List<SelectedLine> selectedLine(List<Long> memberIds, List<String> types) {
+		Map<Long, Member> found = memberRepository.findAllById(memberIds).stream()
+			.collect(Collectors.toMap(Member::getId, m -> m));
+		List<SelectedLine> result = new ArrayList<>();
+		for (int i = 0; i < memberIds.size(); i++) {
+			Member m = found.get(memberIds.get(i));
+			if (m != null) {
+				result.add(new SelectedLine(option(m), typeAt(types, i)));
+			}
+		}
+		return result;
+	}
+
+	public record SelectedLine(ApproverGroup.Option person, LineType type) {
+	}
+
+	private static LineType typeAt(List<String> types, int i) {
+		return LineType.parse(types != null && i < types.size() ? types.get(i) : null);
+	}
+
+	/** 문서번호를 매기고 결재선 첫 단계(병렬 합의면 여러 명)를 결재 차례로 만든다 */
 	private Long start(ApprovalDocument doc) {
 		Member drafter = doc.getDrafter();
 		String prefix = doc.getTemplate().getCode() + "-" + Year.now().getValue() + "-";
@@ -319,8 +358,11 @@ public class ApprovalService {
 			l.reset();
 			l.snapshot(deptName(l.getApprover()), gradeName(l.getApprover()));
 		}
-		lines.get(0).activate();
-		notifyTurn(lines.get(0));
+		int first = lines.get(0).getStage();
+		lines.stream().filter(l -> l.getStage() == first).forEach(l -> {
+			l.activate();
+			notifyTurn(l);
+		});
 		for (ApprovalCc cc : ccRepository.findByDocument(doc.getId())) {
 			notify(cc.getMember(), doc, drafter.getName() + " 님이 '" + doc.getTitle() + "' 문서의 참조자로 지정했습니다.");
 		}
@@ -333,6 +375,10 @@ public class ApprovalService {
 		String title = trimToEmpty(form.getTitle());
 		String content = form.getContent() == null ? "" : form.getContent();
 		List<Member> approvers = approvers(form.getApproverIds(), me);
+		List<LineType> types = new ArrayList<>();
+		for (int i = 0; i < approvers.size(); i++) {
+			types.add(typeAt(form.getLineTypes(), i));
+		}
 		List<Member> ccMembers = ccMembers(form.getCcIds(), me, approvers);
 		ApprovalDocument existing = form.getId() == null ? null : editableDraft(form.getId(), loginId);
 		ApprovalTemplate template = forced != null ? forced
@@ -350,6 +396,9 @@ public class ApprovalService {
 			if (approvers.isEmpty()) {
 				throw new BusinessException("결재자를 한 명 이상 지정하세요.");
 			}
+			if (types.get(types.size() - 1) != LineType.APPROVAL) {
+				throw new BusinessException("최종 결재자는 합의가 아닌 결재로 지정하세요.");
+			}
 		}
 		if (title.isEmpty()) {
 			title = "(제목 없음)";
@@ -366,8 +415,16 @@ public class ApprovalService {
 			lineRepository.flush();
 		}
 		doc.changeFields(values);
+		// 이어진 병렬 합의는 같은 단계, 나머지는 한 사람씩 다음 단계
+		int stage = 0;
+		LineType prev = null;
 		for (int i = 0; i < approvers.size(); i++) {
-			lineRepository.save(new ApprovalLine(doc, i + 1, approvers.get(i)));
+			LineType t = types.get(i);
+			if (!(t == LineType.AGREE_PAR && prev == LineType.AGREE_PAR)) {
+				stage++;
+			}
+			lineRepository.save(new ApprovalLine(doc, i + 1, approvers.get(i), t.getKind(), stage));
+			prev = t;
 		}
 		ccMembers.forEach(m -> ccRepository.save(new ApprovalCc(doc, m)));
 		return doc;
@@ -521,7 +578,7 @@ public class ApprovalService {
 		int step = 1;
 		for (ApprovalLine l : lineRepository.findByDocument(docId)) {
 			if (l.getApprover().isEnabled()) {
-				lineRepository.save(new ApprovalLine(doc, step++, l.getApprover()));
+				lineRepository.save(new ApprovalLine(doc, step++, l.getApprover(), l.getKind(), l.getStage()));
 			}
 		}
 		for (ApprovalCc cc : ccRepository.findByDocument(docId)) {
@@ -541,8 +598,8 @@ public class ApprovalService {
 		List<ApprovalLine> lines = lineRepository.findByDocument(docId);
 		boolean isDrafter = d.getDrafter().getLoginId().equals(loginId);
 		Member me = member(loginId);
-		Optional<ApprovalLine> pending = pendingLine(lines);
-		boolean canDecide = d.getStatus() == DocStatus.IN_PROGRESS && pending.map(l -> canAct(l, me)).orElse(false);
+		Optional<ApprovalLine> pending = d.getStatus() == DocStatus.IN_PROGRESS ? actionableLine(lines, me) : Optional.empty();
+		boolean canDecide = pending.isPresent();
 		boolean inLine = lines.stream().anyMatch(l -> l.getApprover().getId().equals(me.getId())
 			|| (l.getActedBy() != null && l.getActedBy().getId().equals(me.getId())));
 		List<ApprovalCc> ccs = ccRepository.findByDocument(docId);
@@ -552,7 +609,8 @@ public class ApprovalService {
 		}
 
 		boolean deputy = canDecide && !pending.get().getApprover().getId().equals(me.getId());
-		boolean canFinal = canDecide && !deputy && pending.get().getStep() < lines.size();
+		boolean canFinal = canDecide && !deputy && !pending.get().isAgreement()
+			&& lines.stream().anyMatch(l -> l.getStage() > pending.get().getStage());
 		boolean canWithdraw = isDrafter && !d.isLinked() && d.getStatus() == DocStatus.IN_PROGRESS
 			&& lines.stream().noneMatch(l -> l.getStatus() == LineStatus.APPROVED);
 		boolean canEdit = isDrafter && d.getStatus() == DocStatus.DRAFT;
@@ -566,7 +624,8 @@ public class ApprovalService {
 				draft ? deptName(l.getApprover()) : l.getApproverDeptName(),
 				draft ? gradeName(l.getApprover()) : l.getApproverGradeName(),
 				l.getStatus(), l.getComment(), l.getActedAt(),
-				l.getActedBy() == null ? null : l.getActedBy().getName(), l.isFinalApproval()))
+				l.getActedBy() == null ? null : l.getActedBy().getName(), l.isFinalApproval(),
+				l.getKind(), l.getStage(), lines.stream().anyMatch(o -> o != l && o.getStage() == l.getStage())))
 			.toList();
 
 		return new DocView(d.getId(), d.getDocNo(), d.getTemplate().getName(), d.getTitle(), d.getContent(), d.getFields(),
@@ -577,7 +636,8 @@ public class ApprovalService {
 			lineViews, canDecide, canWithdraw, canEdit, canFinal,
 			deputy ? pending.get().getApprover().getName() : null,
 			ccs.stream().map(c -> label(c.getMember())).toList(),
-			canRedraft, origin == null ? null : origin.getDocNo(), origin != null && isDrafter ? origin.getId() : null);
+			canRedraft, origin == null ? null : origin.getDocNo(), origin != null && isDrafter ? origin.getId() : null,
+			canDecide && pending.get().isAgreement());
 	}
 
 	/** 목록의 [결재상태 보기]. 볼 권한이 없는 문서가 섞이면 거절한다 */
@@ -599,13 +659,21 @@ public class ApprovalService {
 	public void approve(Long docId, String loginId, String comment) {
 		Member me = member(loginId);
 		List<ApprovalLine> lines = myTurn(docId, me);
-		ApprovalLine current = pendingLine(lines).orElseThrow();
+		ApprovalLine current = actionableLine(lines, me).orElseThrow();
 		current.decide(LineStatus.APPROVED, blankToNull(comment), deputyOf(current, me), false);
 
-		Optional<ApprovalLine> next = lines.stream().filter(l -> l.getStep() == current.getStep() + 1).findFirst();
+		// 병렬 합의는 같은 단계의 모두가 합의해야 넘어간다
+		boolean stageDone = lines.stream().filter(l -> l.getStage() == current.getStage())
+			.allMatch(l -> l.getStatus() == LineStatus.APPROVED);
+		if (!stageDone) {
+			return;
+		}
+		OptionalInt next = lines.stream().mapToInt(ApprovalLine::getStage).filter(s -> s > current.getStage()).min();
 		if (next.isPresent()) {
-			next.get().activate();
-			notifyTurn(next.get());
+			lines.stream().filter(l -> l.getStage() == next.getAsInt()).forEach(l -> {
+				l.activate();
+				notifyTurn(l);
+			});
 		} else {
 			finish(current.getDocument(), DocStatus.APPROVED);
 		}
@@ -616,11 +684,14 @@ public class ApprovalService {
 	public void approveFinal(Long docId, String loginId, String comment) {
 		Member me = member(loginId);
 		List<ApprovalLine> lines = myTurn(docId, me);
-		ApprovalLine current = pendingLine(lines).orElseThrow();
+		ApprovalLine current = actionableLine(lines, me).orElseThrow();
 		if (deputyOf(current, me) != null) {
 			throw new BusinessException("대결자는 전결할 수 없습니다.");
 		}
-		List<ApprovalLine> later = lines.stream().filter(l -> l.getStep() > current.getStep()).toList();
+		if (current.isAgreement()) {
+			throw new BusinessException("합의자는 전결할 수 없습니다.");
+		}
+		List<ApprovalLine> later = lines.stream().filter(l -> l.getStage() > current.getStage()).toList();
 		if (later.isEmpty()) {
 			throw new BusinessException("마지막 결재자는 [승인]으로 결재하세요.");
 		}
@@ -640,8 +711,10 @@ public class ApprovalService {
 		}
 		Member me = member(loginId);
 		List<ApprovalLine> lines = myTurn(docId, me);
-		ApprovalLine current = pendingLine(lines).orElseThrow();
+		ApprovalLine current = actionableLine(lines, me).orElseThrow();
 		current.decide(LineStatus.REJECTED, comment.trim(), deputyOf(current, me), false);
+		// 함께 합의하던 사람은 더 처리할 필요가 없다
+		lines.stream().filter(l -> l.getStatus() == LineStatus.PENDING).forEach(ApprovalLine::reset);
 		finish(current.getDocument(), DocStatus.REJECTED);
 	}
 
@@ -679,10 +752,11 @@ public class ApprovalService {
 	private void notifyTurn(ApprovalLine line) {
 		ApprovalDocument doc = line.getDocument();
 		String title = doc.getDrafter().getName() + " 님의 '" + doc.getTitle() + "' 문서";
-		notify(line.getApprover(), doc, title + "를 결재할 차례입니다.");
+		String verb = line.getKind().getLabel();
+		notify(line.getApprover(), doc, title + "를 " + verb + "할 차례입니다.");
 		for (ApprovalDelegation d : delegationRepository.findActiveByDelegator(line.getApprover().getId(), LocalDate.now(clock))) {
 			if (!d.getDelegate().getId().equals(doc.getDrafter().getId())) {
-				notify(d.getDelegate(), doc, title + "를 " + line.getApprover().getName() + " 님 대신 결재할 수 있습니다.");
+				notify(d.getDelegate(), doc, title + "를 " + line.getApprover().getName() + " 님 대신 " + verb + "할 수 있습니다.");
 			}
 		}
 	}
@@ -715,16 +789,21 @@ public class ApprovalService {
 		ApprovalDocument d = documentRepository.findById(docId)
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 		List<ApprovalLine> lines = lineRepository.findByDocument(docId);
-		boolean mine = d.getStatus() == DocStatus.IN_PROGRESS
-			&& pendingLine(lines).map(l -> canAct(l, me)).orElse(false);
+		boolean mine = d.getStatus() == DocStatus.IN_PROGRESS && actionableLine(lines, me).isPresent();
 		if (!mine) {
 			throw new BusinessException("지금 결재할 차례가 아닙니다.");
 		}
 		return lines;
 	}
 
-	private static Optional<ApprovalLine> pendingLine(List<ApprovalLine> lines) {
-		return lines.stream().filter(l -> l.getStatus() == LineStatus.PENDING).findFirst();
+	/**
+	 * 지금 차례인 줄 중 내가 처리할 수 있는 줄. 병렬 합의면 차례인 줄이 여럿이므로,
+	 * 내 줄이 있으면 그것을, 없으면 대결로 맡은 줄을 고른다.
+	 */
+	private Optional<ApprovalLine> actionableLine(List<ApprovalLine> lines, Member me) {
+		List<ApprovalLine> pending = lines.stream().filter(l -> l.getStatus() == LineStatus.PENDING).toList();
+		return pending.stream().filter(l -> l.getApprover().getId().equals(me.getId())).findFirst()
+			.or(() -> pending.stream().filter(l -> canAct(l, me)).findFirst());
 	}
 
 	private ApprovalDocument editableDraft(Long docId, String loginId) {

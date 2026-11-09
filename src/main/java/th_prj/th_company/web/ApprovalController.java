@@ -26,6 +26,7 @@ import th_prj.th_company.approval.DelegationForm;
 import th_prj.th_company.approval.DelegationService;
 import th_prj.th_company.approval.DocRow;
 import th_prj.th_company.approval.DraftForm;
+import th_prj.th_company.approval.LineType;
 import th_prj.th_company.common.BusinessException;
 
 /**
@@ -281,7 +282,8 @@ public class ApprovalController {
 		prepare(form.getId() == null ? "new" : ApprovalBox.DRAFTS.getPath(), authentication, model);
 		model.addAttribute("template", approvalService.templateForForm(form));
 		model.addAttribute("approverGroups", approvalService.approverGroups(authentication.getName()));
-		model.addAttribute("selectedApprovers", approvalService.approverLabels(form.getApproverIds()));
+		model.addAttribute("selectedLine", approvalService.selectedLine(form.getApproverIds(), form.getLineTypes()));
+		model.addAttribute("lineTypes", LineType.values());
 		model.addAttribute("selectedCc", approvalService.approverLabels(form.getCcIds()));
 		model.addAttribute("files", form.getId() == null ? List.of() : approvalService.files(form.getId()));
 		model.addAttribute("maxCc", ApprovalService.MAX_CC);
