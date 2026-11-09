@@ -26,8 +26,7 @@
 							<button type="submit" class="btn-secondary">재기안</button>
 						</form>
 						<button type="button" class="btn-secondary" onclick="window.print()">인쇄</button>
-						<button type="button" class="btn-secondary" id="pdfButton"
-						        th:attr="data-filename=(${doc.docNo} ?: '임시문서') + '_' + ${doc.title}">PDF 저장</button>
+						<a class="btn-secondary" th:href="@{/approval/docs/{id}/pdf(id=${doc.id})}" title="문서를 PDF 파일로 내려받습니다">PDF 저장</a>
 					</div>
 					<div class="decide-bar" th:if="${doc.canDecide}">
 						<span class="hint-inline" th:if="${doc.deputyFor}"
@@ -187,7 +186,6 @@
 		</div>
 	</main>
 </div>
-<script th:src="@{/js/approval-pdf.js}"></script>
 <script th:if="${doc.canDecide}">
 	// 결재 버튼: 의견 입력 창을 열고, 누른 버튼의 처리 주소로 보낸다. 창의 버튼이 곧 최종 확인이다
 	(function () {

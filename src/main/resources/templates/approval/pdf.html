@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<!-- 전자결재 문서 PDF (ApprovalPdfService 가 openhtmltopdf 로 PDF 로 바꾼다). 화면 CSS 대신 PDF 에 맞춘 CSS 를 쓴다 -->
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8">
+	<title th:text="${doc.title}">제목</title>
+	<style>
+		@page { size: A4; margin: 15mm 14mm 16mm; @bottom-center { content: counter(page) " / " counter(pages); font-family: NanumGothic; font-size: 9pt; color: #888; } }
+		body { margin: 0; font-family: NanumGothic, sans-serif; font-size: 10pt; color: #222; line-height: 1.5; }
+		/* 겹친 테두리(collapse)는 오른쪽 끝이 잘려서, 칸은 오른쪽·아래만 긋고 표가 왼쪽·위를 긋는다 */
+		table { border-collapse: separate; border-spacing: 0; }
+		.top { width: 100%; margin-bottom: 14pt; }
+		.top td { vertical-align: top; padding: 0; }
+		.form-name { margin: 6pt 0 0; font-size: 20pt; font-weight: bold; letter-spacing: 6pt; }
+		.stamps { text-align: right; }
+		.stamp-table { margin: 0 0 4pt auto; font-size: 8pt; text-align: center; }
+		.stamp-table { border-top: 1px solid #b9bfca; border-left: 1px solid #b9bfca; }
+		.stamp-table th, .stamp-table td { border-right: 1px solid #b9bfca; border-bottom: 1px solid #b9bfca; }
+		.stamp-label { width: 16pt; padding: 2pt; background: #f4f5f7; font-weight: bold; line-height: 1.5; }
+		.stamp-grade { width: 54pt; padding: 2pt; background: #f4f5f7; }
+		/* 도장은 이름 위 한 줄 (표 칸 안의 절대 위치는 PDF 에서 어긋난다) */
+		.stamp-box { width: 54pt; height: 38pt; padding: 3pt 2pt 2pt; vertical-align: bottom; }
+		.stamp-name { font-size: 9pt; }
+		.stamp { display: block; width: 26pt; margin: 0 auto 3pt; padding: 0 2pt; border: 1.5pt solid #d6336c; border-radius: 3pt;
+			color: #d6336c; font-size: 8pt; font-weight: bold; transform: rotate(-12deg); }
+		.stamp-reject { border-color: #555; color: #555; }
+		.stamp-deputy { display: block; font-size: 7pt; color: #777; }
+		.stamp-date { height: 13pt; padding: 1pt 2pt; color: #777; font-size: 7pt; }
+		.info { width: 100%; margin-bottom: 8pt; border-top: 1px solid #c9ced8; border-left: 1px solid #c9ced8; }
+		.info th, .info td { padding: 5pt 7pt; border-right: 1px solid #c9ced8; border-bottom: 1px solid #c9ced8; text-align: left; vertical-align: top; }
+		.info th { width: 62pt; background: #f4f5f7; font-weight: bold; color: #555; }
+		.title { font-weight: bold; }
+		.muted { color: #777; }
+		.pre { white-space: pre-wrap; word-wrap: break-word; }
+		.body { min-height: 120pt; padding: 10pt 0; line-height: 1.7; }
+		.files { margin: 10pt 0 0; padding: 6pt 0 0; border-top: 1px solid #ddd; list-style: none; font-size: 9pt; }
+		.files li { margin: 2pt 0; }
+		.history { margin-top: 16pt; page-break-inside: avoid; }
+		.history h3 { margin: 0 0 4pt; font-size: 11pt; }
+		.history table { width: 100%; font-size: 8.5pt; border-top: 1px solid #d6d9e0; border-left: 1px solid #d6d9e0; }
+		.history th, .history td { padding: 3pt 5pt; border-right: 1px solid #d6d9e0; border-bottom: 1px solid #d6d9e0; text-align: left; vertical-align: top; }
+		.history th { background: #f4f5f7; }
+		.footer-note { margin-top: 12pt; font-size: 7.5pt; color: #999; text-align: right; }
+	</style>
+</head>
+<body>
+	<table class="top">
+		<tr>
+			<td><div class="form-name" th:text="${doc.templateName}">품의서</div></td>
+			<td class="stamps">
+				<table class="stamp-table">
+					<tr>
+						<th rowspan="3" class="stamp-label">결<br/>재</th>
+						<td class="stamp-grade">기안</td>
+						<td class="stamp-grade" th:each="l : ${doc.approvalLines()}" th:text="${l.gradeName} ?: (${l.step} + '차')">팀장</td>
+					</tr>
+					<tr>
+						<td class="stamp-box">
+							<span class="stamp" th:if="${doc.submittedAt != null}">승인</span>
+							<span class="stamp-name" th:text="${doc.drafterName}">홍길동</span>
+						</td>
+						<td class="stamp-box" th:each="l : ${doc.approvalLines()}">
+							<th:block th:replace="~{approval/view :: stampCell(${l})}"></th:block>
+						</td>
+					</tr>
+					<tr>
+						<td class="stamp-date" th:text="${doc.submittedAt != null} ? ${#temporals.format(doc.submittedAt, 'MM.dd')} : ''">10.23</td>
+						<td class="stamp-date" th:each="l : ${doc.approvalLines()}"
+						    th:text="${l.actedAt != null} ? ${#temporals.format(l.actedAt, 'MM.dd')} : (${l.status.name() == 'PENDING'} ? ${l.statusLabel()} : '')">10.23</td>
+					</tr>
+				</table>
+				<table class="stamp-table" th:unless="${#lists.isEmpty(doc.agreementLines())}">
+					<tr>
+						<th rowspan="3" class="stamp-label">합<br/>의</th>
+						<td class="stamp-grade" th:each="l : ${doc.agreementLines()}"
+						    th:text="(${l.gradeName} ?: '합의') + (${l.parallel} ? ' (병렬)' : '')">팀장</td>
+					</tr>
+					<tr>
+						<td class="stamp-box" th:each="l : ${doc.agreementLines()}">
+							<th:block th:replace="~{approval/view :: stampCell(${l})}"></th:block>
+						</td>
+					</tr>
+					<tr>
+						<td class="stamp-date" th:each="l : ${doc.agreementLines()}"
+						    th:text="${l.actedAt != null} ? ${#temporals.format(l.actedAt, 'MM.dd')} : (${l.status.name() == 'PENDING'} ? ${l.statusLabel()} : '')">10.23</td>
+					</tr>
+				</table>
+			</td>
+		</tr>
+	</table>
+
+	<table class="info">
+		<tr>
+			<th>문서번호</th><td th:text="${doc.docNo} ?: '-'">품의-2026-0001</td>
+			<th>상태</th><td th:text="${doc.status.label}">진행중</td>
+		</tr>
+		<tr>
+			<th>기안자</th>
+			<td>
+				<span th:text="${doc.drafterName}">홍길동</span>
+				<span class="muted" th:if="${doc.drafterGrade}" th:text="${doc.drafterGrade}">대리</span>
+			</td>
+			<th>기안부서</th><td th:text="${doc.drafterDept} ?: '-'">개발1팀</td>
+		</tr>
+		<tr>
+			<th>기안일</th><td th:text="${doc.displaySubmittedAt()}">2026.10.23 10:00</td>
+			<th>완료일</th><td th:text="${doc.displayCompletedAt()}">-</td>
+		</tr>
+		<tr>
+			<th>제목</th><td colspan="3" class="title" th:text="${doc.title}">제목</td>
+		</tr>
+		<tr th:unless="${#lists.isEmpty(doc.ccNames)}">
+			<th>참조</th><td colspan="3" th:text="${#strings.listJoin(doc.ccNames, ', ')}">홍길동</td>
+		</tr>
+		<tr th:if="${doc.originDocNo}">
+			<th>재기안</th><td colspan="3" th:text="${doc.originDocNo} + ' 을(를) 고쳐 다시 올린 문서'">품의-2026-0001</td>
+		</tr>
+	</table>
+
+	<table class="info" th:unless="${#lists.isEmpty(doc.fields)}">
+		<tr th:each="f : ${doc.fields}">
+			<th th:text="${f.label}">휴가 종류</th>
+			<td class="pre" th:text="${f.display()}">연차</td>
+		</tr>
+	</table>
+	<div class="body pre" th:if="${#lists.isEmpty(doc.fields) or !#strings.isEmpty(doc.content)}" th:text="${doc.content}">본문</div>
+
+	<ul class="files" th:unless="${#lists.isEmpty(files)}">
+		<li th:each="f : ${files}" th:text="'첨부: ' + ${f.name} + ' (' + ${f.displaySize()} + ')'">첨부: 파일.pdf (10 KB)</li>
+	</ul>
+
+	<div class="history" th:unless="${#lists.isEmpty(doc.lines)}">
+		<h3>결재 이력</h3>
+		<table>
+			<tr><th>단계</th><th>구분</th><th>결재자</th><th>처리</th><th>처리일</th><th>의견</th></tr>
+			<tr th:each="l : ${doc.lines}">
+				<td th:text="${l.stageLabel()}">1차</td>
+				<td th:text="${l.agreement()} ? '합의' : '결재'">결재</td>
+				<td>
+					<span th:text="${l.approverName}">김팀장</span>
+					<span class="muted" th:if="${l.actedByName}" th:text="'(대리 ' + ${l.actedByName} + ')'"></span>
+				</td>
+				<td th:text="${l.finalApproval} ? '전결' : ${l.statusLabel()}">승인</td>
+				<td th:text="${l.displayActedAt()}">10.23 10:00</td>
+				<td class="pre" th:text="${l.comment}">의견</td>
+			</tr>
+		</table>
+	</div>
+
+	<div class="footer-note" th:text="'출력 ' + ${printedAt} + ' · ' + ${printedBy}">출력 2026.11.09 17:00 · 홍길동</div>
+</body>
+</html>

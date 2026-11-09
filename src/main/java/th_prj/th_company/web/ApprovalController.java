@@ -1,9 +1,14 @@
 package th_prj.th_company.web;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -20,10 +25,12 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.validation.Valid;
 import th_prj.th_company.approval.ApprovalBox;
+import th_prj.th_company.approval.ApprovalPdfService;
 import th_prj.th_company.approval.ApprovalService;
 import th_prj.th_company.approval.ApprovalTemplate;
 import th_prj.th_company.approval.DelegationForm;
 import th_prj.th_company.approval.DelegationService;
+import th_prj.th_company.approval.DocView;
 import th_prj.th_company.approval.DocRow;
 import th_prj.th_company.approval.DraftForm;
 import th_prj.th_company.approval.LineType;
@@ -38,8 +45,11 @@ public class ApprovalController {
 
 	private final ApprovalService approvalService;
 	private final DelegationService delegationService;
+	private final ApprovalPdfService approvalPdfService;
 
-	public ApprovalController(ApprovalService approvalService, DelegationService delegationService) {
+	public ApprovalController(ApprovalService approvalService, DelegationService delegationService,
+			ApprovalPdfService approvalPdfService) {
+		this.approvalPdfService = approvalPdfService;
 		this.approvalService = approvalService;
 		this.delegationService = delegationService;
 	}
@@ -173,6 +183,18 @@ public class ApprovalController {
 		String menu = ApprovalBox.fromPath(from == null ? "" : from).map(ApprovalBox::getPath).orElse(null);
 		prepare(menu, authentication, model);
 		return "approval/view";
+	}
+
+	/** 문서를 PDF 파일로 내려받는다. 문서를 볼 수 있는 사람만 */
+	@GetMapping("/docs/{id}/pdf")
+	public ResponseEntity<byte[]> pdf(@PathVariable Long id, Authentication authentication) {
+		DocView doc = approvalService.view(id, authentication.getName());
+		byte[] pdf = approvalPdfService.render(doc, approvalService.files(id), authentication.getName());
+		return ResponseEntity.ok()
+			.header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
+				.filename(ApprovalPdfService.fileName(doc), StandardCharsets.UTF_8).build().toString())
+			.contentType(MediaType.APPLICATION_PDF)
+			.body(pdf);
 	}
 
 	@PostMapping("/docs/{id}/approve")

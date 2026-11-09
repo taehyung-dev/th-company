@@ -3,19 +3,29 @@ package th_prj.th_company;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.formLogin;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 import th_prj.th_company.approval.ApprovalBox;
 import th_prj.th_company.approval.ApprovalDocumentRepository;
@@ -198,5 +208,34 @@ class ApprovalAgreementTests {
 		String html = mvc.perform(get("/approval/docs/{id}", id).session(session))
 			.andReturn().getResponse().getContentAsString();
 		assertThat(html).contains("합<br>의", "data-decide=\"합의\"", "doc-toolbar").doesNotContain("data-decide=\"전결\"");
+	}
+
+	@Test
+	void documentDownloadsAsPdf_withKoreanTextAndBothStampBoxes_onlyForPeopleWhoCanSeeIt() throws Exception {
+		Long id = approvalService.submit(form("PDF 확인/견적", List.of(agreeA.getId(), boss.getId()),
+			List.of(LineType.AGREE_SEQ, LineType.APPROVAL)), drafter);
+		approvalService.approve(id, agreeA.getLoginId(), "검토했습니다");
+		MockHttpSession session = (MockHttpSession) mvc.perform(formLogin("/login").user(drafter).password("pw"))
+			.andReturn().getRequest().getSession();
+		var response = mvc.perform(get("/approval/docs/{id}/pdf", id).session(session))
+			.andExpect(MockMvcResultMatchers.status().isOk())
+			.andExpect(content().contentType(MediaType.APPLICATION_PDF))
+			.andExpect(header().string("Content-Disposition", containsString(".pdf")))
+			.andReturn().getResponse();
+		byte[] pdf = response.getContentAsByteArray();
+		assertThat(new String(pdf, 0, 5, StandardCharsets.ISO_8859_1)).isEqualTo("%PDF-");
+		// 파일 이름의 / 는 _ 로
+		assertThat(URLDecoder.decode(response.getHeader("Content-Disposition"), StandardCharsets.UTF_8)).contains("PDF 확인_견적.pdf");
+		try (PDDocument document = Loader.loadPDF(pdf)) {
+			String text = new PDFTextStripper().getText(document);
+			assertThat(text).contains("PDF 확인/견적", "기안자", "재무", "대표", "검토했습니다", "결재 이력");
+		}
+
+		// 결재선에 없는 사람은 못 받는다
+		Member stranger = member("stranger" + UUID.randomUUID().toString().substring(0, 6), "외부",
+			departmentRepository.save(new Department("다른팀" + UUID.randomUUID().toString().substring(0, 6), null, 0)));
+		MockHttpSession other = (MockHttpSession) mvc.perform(formLogin("/login").user(stranger.getLoginId()).password("pw"))
+			.andReturn().getRequest().getSession();
+		mvc.perform(get("/approval/docs/{id}/pdf", id).session(other)).andExpect(MockMvcResultMatchers.status().isForbidden());
 	}
 }
