@@ -54,7 +54,7 @@ public final class LeaveViews {
 	}
 
 	/** 근태관리자: 직원별 연차 현황 */
-	public record MemberRow(Long memberId, String name, Long deptId, String gradeName, String dutyName,
+	public record MemberRow(Long memberId, String name, Long deptId, String deptName, String gradeName, String dutyName,
 			String photoUrl, LocalDate hireDate, Summary summary) {
 
 		public String initial() {

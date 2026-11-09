@@ -23,6 +23,8 @@
 					<a class="btn-secondary" th:href="@{${base}(year=${year - 1},dept=${org.selectedId})}">‹ 이전 해</a>
 					<strong th:text="${year} + '년'">2026년</strong>
 					<a class="btn-secondary" th:href="@{${base}(year=${year + 1},dept=${org.selectedId})}">다음 해 ›</a>
+					<a class="btn-secondary excel-btn" th:href="@{|${base}/excel|(year=${year})}"
+					   title="회사 전체를 엑셀로 내려받습니다">엑셀 다운로드</a>
 				</div>
 
 				<div class="org org-manage">

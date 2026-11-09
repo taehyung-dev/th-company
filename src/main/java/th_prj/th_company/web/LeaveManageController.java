@@ -1,5 +1,8 @@
 package th_prj.th_company.web;
 
+import java.util.Comparator;
+
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -12,6 +15,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.servlet.http.HttpServletRequest;
 import th_prj.th_company.common.BusinessException;
+import th_prj.th_company.common.XlsxWriter;
 import th_prj.th_company.leave.LeaveService;
 import th_prj.th_company.leave.LeaveViews;
 import th_prj.th_company.org.OrgChartService;
@@ -51,6 +55,27 @@ public class LeaveManageController {
 		model.addAttribute("requests", leaveService.allRequests(y));
 		model.addAttribute("base", base(request));
 		return fromAdmin(request) ? "admin/leave-manage" : "attendance/leave-manage";
+	}
+
+	/** 그해 직원별 연차와 휴가 신청을 회사 전체로 내려받는다 (시트 두 개) */
+	@GetMapping("/excel")
+	public ResponseEntity<byte[]> excel(@RequestParam(required = false) Integer year) {
+		int y = year == null ? leaveService.currentYear() : year;
+		Comparator<Long> deptOrder = orgChartService.departmentOrder();
+		XlsxWriter x = new XlsxWriter();
+		XlsxWriter.Sheet members = x.sheet("직원별 연차", 16, 10, 9, 9, 12, 8, 8, 9, 8);
+		members.header("부서", "이름", "직급", "직책", "입사일", "연차", "사용", "결재 중", "남음");
+		leaveService.memberRows(y).stream()
+			.sorted(Comparator.comparing(LeaveViews.MemberRow::deptId, deptOrder))
+			.forEach(m -> members.row(m.deptName(), m.name(), m.gradeName(), m.dutyName(), m.displayHireDate(),
+				m.summary().granted(), m.summary().used(), m.summary().pending(), m.summary().remaining()));
+		XlsxWriter.Sheet requests = x.sheet("휴가 신청", 16, 10, 10, 24, 8, 30, 9);
+		requests.header("부서", "이름", "종류", "기간", "일수", "사유", "상태");
+		for (LeaveViews.Row r : leaveService.allRequests(y)) {
+			requests.row(r.deptName(), r.memberName(), r.type().getLabel(), r.period(), r.days(), r.reason(),
+				r.status().getLabel());
+		}
+		return x.download("전체휴가현황_" + y + ".xlsx");
 	}
 
 	/** days 를 비우면 입사일 기준으로 되돌린다 */

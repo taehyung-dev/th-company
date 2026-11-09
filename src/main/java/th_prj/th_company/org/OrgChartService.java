@@ -135,6 +135,16 @@ public class OrgChartService {
 			.orElseGet(() -> noDept > 0 ? Long.valueOf(DeptView.NO_DEPT) : depts.isEmpty() ? null : depts.get(0).id());
 	}
 
+	/** 부서 트리 순서 (엑셀처럼 회사 전체를 부서 순서로 늘어놓을 때). 부서가 없으면 맨 뒤 */
+	public Comparator<Long> departmentOrder() {
+		List<DepartmentRow> tree = departmentService.tree();
+		Map<Long, Integer> index = new java.util.HashMap<>();
+		for (int i = 0; i < tree.size(); i++) {
+			index.put(tree.get(i).id(), i);
+		}
+		return Comparator.comparingInt(id -> id == null ? Integer.MAX_VALUE : index.getOrDefault(id, Integer.MAX_VALUE));
+	}
+
 	/** 사용 안 함 부서와 그 하위 부서를 뺀다. rows 는 트리 순서여야 한다. */
 	public static List<DepartmentRow> visibleRows(List<DepartmentRow> rows) {
 		List<DepartmentRow> visible = new ArrayList<>();

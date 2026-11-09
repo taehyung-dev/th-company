@@ -1153,6 +1153,9 @@ a.btn-primary, a.btn-secondary { display: inline-block; text-decoration: none; }
 
 .doc-after { margin-top: 16px; }
 .doc-after .post-actions { padding-top: 0; border-top: none; }
+
+.excel-btn { margin-left: auto; white-space: nowrap; }
+
 .doc-preview { width: min(calc(210mm + 50px), calc(100vw - 32px)); background: var(--bg); }
 .doc-preview .a4-sheet { width: auto; max-width: 210mm; margin: 16px auto; }
 

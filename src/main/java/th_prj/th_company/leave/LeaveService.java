@@ -94,7 +94,7 @@ public class LeaveService {
 			.collect(Collectors.toMap(b -> b.getMember().getId(), b -> b));
 		return memberRepository.findActiveWithDepartment().stream()
 			.sorted(OrgChartService.MEMBER_ORDER)
-			.map(m -> new MemberRow(m.getId(), m.getName(), m.getDepartment().getId(),
+			.map(m -> new MemberRow(m.getId(), m.getName(), m.getDepartment().getId(), m.getDepartment().getName(),
 				m.getGrade() == null ? null : m.getGrade().getName(),
 				m.getDuty() == null ? null : m.getDuty().getName(), m.getPhotoUrl(), m.getHireDate(),
 				summary(m, year, balances.get(m.getId()), byMember.getOrDefault(m.getId(), List.of()))))

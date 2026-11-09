@@ -24,6 +24,8 @@
 					<a class="btn-secondary" th:if="${board.next != null}" th:href="@{/attendance/manage(date=${board.next},dept=${org.selectedId})}"
 					   aria-label="다음 날" title="다음 날">›</a>
 					<span class="address-total" th:text="${board.displayDate()}">2026년 10월 28일 (수)</span>
+					<a class="btn-secondary excel-btn" th:href="@{/attendance/manage/excel(date=${board.date})}"
+					   title="회사 전체를 엑셀로 내려받습니다">엑셀 다운로드</a>
 				</form>
 
 				<div class="attend-summary">
