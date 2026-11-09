@@ -24,6 +24,16 @@
 					<input type="hidden" th:field="*{id}">
 					<input type="hidden" th:field="*{templateId}">
 
+					<div class="form-buttons doc-toolbar">
+						<button type="submit" form="deleteForm" class="btn-secondary danger" th:if="${form.id != null}">삭제</button>
+						<span class="spacer"></span>
+						<a class="btn-secondary" th:href="${form.id == null} ? @{/approval} : @{/approval/box/drafts}">취소</a>
+						<button type="button" class="btn-secondary" id="previewButton">미리보기</button>
+						<button type="submit" name="action" value="save" class="btn-secondary">임시저장</button>
+						<button type="submit" name="action" value="submit" class="btn-primary"
+						        onclick="return confirm('결재를 상신할까요?')">상신</button>
+					</div>
+
 					<div class="doc a4-sheet">
 					<div class="doc-top">
 						<h2 class="doc-form-name" th:text="${template.name}">품의서</h2>
@@ -122,16 +132,6 @@
 					<p class="field-error" th:if="${#fields.hasErrors('content')}" th:errors="*{content}"></p>
 
 					<th:block th:replace="~{fragments/files :: edit(${files}, ${form.deleteFileIds})}"></th:block>
-					</div>
-
-					<div class="form-buttons">
-						<button type="submit" form="deleteForm" class="btn-secondary danger" th:if="${form.id != null}">삭제</button>
-						<span class="spacer"></span>
-						<a class="btn-secondary" th:href="${form.id == null} ? @{/approval} : @{/approval/box/drafts}">취소</a>
-						<button type="button" class="btn-secondary" id="previewButton">미리보기</button>
-						<button type="submit" name="action" value="save" class="btn-secondary">임시저장</button>
-						<button type="submit" name="action" value="submit" class="btn-primary"
-						        onclick="return confirm('결재를 상신할까요?')">상신</button>
 					</div>
 				</form>
 				<form id="deleteForm" th:if="${form.id != null}" th:action="@{/approval/docs/{id}/delete(id=${form.id})}"

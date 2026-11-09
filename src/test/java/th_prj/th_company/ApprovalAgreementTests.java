@@ -197,6 +197,6 @@ class ApprovalAgreementTests {
 			.andReturn().getRequest().getSession();
 		String html = mvc.perform(get("/approval/docs/{id}", id).session(session))
 			.andReturn().getResponse().getContentAsString();
-		assertThat(html).contains("합<br>의", "data-decide=\"합의\"").doesNotContain("data-decide=\"전결\"");
+		assertThat(html).contains("합<br>의", "data-decide=\"합의\"", "doc-toolbar").doesNotContain("data-decide=\"전결\"");
 	}
 }

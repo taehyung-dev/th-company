@@ -1146,13 +1146,16 @@ a.btn-primary, a.btn-secondary { display: inline-block; text-decoration: none; }
 .doc-write .doc-info { margin-bottom: 16px; }
 .doc-write .doc-info input[type=text] { margin: 0; }
 .doc-write .doc-info .field-error { margin: 4px 0 0; }
-.doc-write .form-buttons { margin-top: 16px; }
+.doc-write .form-buttons.doc-toolbar { margin: 0 0 12px; }
 .cc-row { display: flex; align-items: center; gap: 10px; }
 .cc-row .btn-secondary { margin-left: auto; }
 .cc-inline { display: flex; flex-wrap: wrap; gap: 2px 12px; margin: 0; padding: 0; list-style: none; }
 
-.doc-after { margin-top: 16px; }
-.doc-after .post-actions { padding-top: 0; border-top: none; }
+/* 문서 상단 버튼 줄: 왼쪽 문서 다루기, 오른쪽 결재 처리 */
+.doc-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+.doc-toolbar-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.doc-toolbar form { margin: 0; }
+.doc-toolbar .decide-bar { margin: 0 0 0 auto; }
 
 .excel-btn { margin-left: auto; white-space: nowrap; }
 
@@ -1181,7 +1184,7 @@ a.btn-primary, a.btn-secondary { display: inline-block; text-decoration: none; }
 
 @page { size: A4; margin: 15mm; }
 @media print {
-	.site-header, .topbar, .menubar, .board-tree, .board-head, .alert, .decide-bar, .doc-after, .comments, .form-buttons, .stamp-tools { display: none; }
+	.site-header, .topbar, .menubar, .board-tree, .board-head, .alert, .decide-bar, .doc-toolbar, .comments, .form-buttons, .stamp-tools { display: none; }
 	.layout, .board-layout { display: block; min-height: 0; }
 	.content { padding: 0; }
 	.a4-page { max-width: none; }

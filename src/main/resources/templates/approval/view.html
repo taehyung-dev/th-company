@@ -13,16 +13,30 @@
 				<div class="alert alert-info" th:if="${message}" th:text="${message}"></div>
 				<div class="alert alert-error" th:if="${error}" th:text="${error}"></div>
 
-				<!-- 결재 처리: 버튼을 누르면 의견 입력 창이 열리고, 그 창의 버튼으로 처리된다 -->
-				<div class="decide-bar" th:if="${doc.canDecide}">
-					<span class="hint-inline" th:if="${doc.deputyFor}"
-					      th:text="${doc.deputyFor} + ' 님의 대결자로 ' + (${doc.agreeing} ? '합의' : '결재') + '합니다.'"></span>
-					<button type="button" class="btn-secondary danger" data-decide="반려" data-required="true"
-					        data-hint="반려 사유를 입력하세요." th:attr="data-action=@{/approval/docs/{id}/reject(id=${doc.id})}">반려</button>
-					<button type="button" class="btn-secondary" data-decide="전결" th:if="${doc.canFinalApprove}"
-					        data-hint="뒤 결재자의 결재 없이 문서가 완료됩니다." th:attr="data-action=@{/approval/docs/{id}/final-approve(id=${doc.id})}">전결</button>
-					<button type="button" class="btn-primary" th:attr="data-decide=${doc.agreeing} ? '합의' : '승인',data-action=@{/approval/docs/{id}/approve(id=${doc.id})}"
-					        th:text="${doc.agreeing} ? '합의' : '승인'">승인</button>
+				<!-- 상단 버튼. 왼쪽은 문서 다루기, 오른쪽은 결재 처리 (누르면 의견 입력 창이 열리고 그 창의 버튼으로 처리된다) -->
+				<div class="doc-toolbar">
+					<div class="doc-toolbar-group">
+						<a class="btn-secondary" th:href="@{/approval/box/{p}(p=${menu} ?: 'progress')}">목록</a>
+						<a class="btn-secondary" th:if="${doc.canEdit}" th:href="@{/approval/docs/{id}/edit(id=${doc.id})}">수정</a>
+						<form th:if="${doc.canWithdraw}" th:action="@{/approval/docs/{id}/withdraw(id=${doc.id})}" method="post"
+						      onsubmit="return confirm('문서를 회수할까요? 보관함으로 이동합니다.')">
+							<button type="submit" class="btn-secondary">회수</button>
+						</form>
+						<form th:if="${doc.canRedraft}" th:action="@{/approval/docs/{id}/redraft(id=${doc.id})}" method="post">
+							<button type="submit" class="btn-secondary">재기안</button>
+						</form>
+						<button type="button" class="btn-secondary" onclick="window.print()">인쇄</button>
+					</div>
+					<div class="decide-bar" th:if="${doc.canDecide}">
+						<span class="hint-inline" th:if="${doc.deputyFor}"
+						      th:text="${doc.deputyFor} + ' 님의 대결자로 ' + (${doc.agreeing} ? '합의' : '결재') + '합니다.'"></span>
+						<button type="button" class="btn-secondary danger" data-decide="반려" data-required="true"
+						        data-hint="반려 사유를 입력하세요." th:attr="data-action=@{/approval/docs/{id}/reject(id=${doc.id})}">반려</button>
+						<button type="button" class="btn-secondary" data-decide="전결" th:if="${doc.canFinalApprove}"
+						        data-hint="뒤 결재자의 결재 없이 문서가 완료됩니다." th:attr="data-action=@{/approval/docs/{id}/final-approve(id=${doc.id})}">전결</button>
+						<button type="button" class="btn-primary" th:attr="data-decide=${doc.agreeing} ? '합의' : '승인',data-action=@{/approval/docs/{id}/approve(id=${doc.id})}"
+						        th:text="${doc.agreeing} ? '합의' : '승인'">승인</button>
+					</div>
 				</div>
 
 				<article class="doc a4-sheet">
@@ -125,21 +139,6 @@
 
 					<ul th:replace="~{fragments/files :: view(${files})}"></ul>
 				</article>
-
-				<div class="doc-after">
-					<footer class="post-actions">
-						<a class="btn-secondary" th:href="@{/approval/box/{p}(p=${menu} ?: 'progress')}">목록</a>
-						<a class="btn-secondary" th:if="${doc.canEdit}" th:href="@{/approval/docs/{id}/edit(id=${doc.id})}">수정</a>
-						<form th:if="${doc.canWithdraw}" th:action="@{/approval/docs/{id}/withdraw(id=${doc.id})}" method="post"
-						      onsubmit="return confirm('문서를 회수할까요? 보관함으로 이동합니다.')">
-							<button type="submit" class="btn-secondary">회수</button>
-						</form>
-						<form th:if="${doc.canRedraft}" th:action="@{/approval/docs/{id}/redraft(id=${doc.id})}" method="post">
-							<button type="submit" class="btn-primary">재기안</button>
-						</form>
-						<button type="button" class="btn-secondary" onclick="window.print()">인쇄</button>
-					</footer>
-				</div>
 
 				<!-- 결재 이력 -->
 				<section class="board-panel comments">
