@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -15,6 +16,7 @@ import th_prj.th_company.member.Member;
 
 /**
  * 알림. 각 기능의 서비스가 자기 트랜잭션 안에서 send 를 부른다 (작업이 취소되면 알림도 남지 않는다).
+ * 커밋되면 NotificationPush 가 열려 있는 화면에 바로 보낸다.
  */
 @Service
 @Transactional(readOnly = true)
@@ -27,10 +29,12 @@ public class NotificationService {
 
 	private final NotificationRepository repository;
 	private final Clock clock;
+	private final ApplicationEventPublisher events;
 
-	public NotificationService(NotificationRepository repository, Clock clock) {
+	public NotificationService(NotificationRepository repository, Clock clock, ApplicationEventPublisher events) {
 		this.repository = repository;
 		this.clock = clock;
+		this.events = events;
 	}
 
 	public record Row(Long id, String category, String message, String time, boolean read) {
@@ -39,7 +43,8 @@ public class NotificationService {
 	@Transactional
 	public void send(Member to, String category, String message, String link) {
 		String text = message.length() > MAX_MESSAGE ? message.substring(0, MAX_MESSAGE - 1) + "…" : message;
-		repository.save(new Notification(to, category, text, link, LocalDateTime.now(clock)));
+		Notification saved = repository.save(new Notification(to, category, text, link, LocalDateTime.now(clock)));
+		events.publishEvent(new NotificationPush.Created(saved.getId(), to.getLoginId(), category, text));
 	}
 
 	public long unreadCount(String loginId) {

@@ -15,7 +15,7 @@
 		<div class="topbar-right">
 			<span class="user-name" th:title="${currentUser}"><strong th:text="${currentUserName}">홍길동</strong> 님</span>
 			<!-- 알림: 누르면 최근 알림을 패널로 보여 준다. 스크립트가 없으면 링크대로 알림 화면으로 간다 -->
-			<div class="noti" data-noti th:attr="data-url=@{/notifications/recent}">
+			<div class="noti" data-noti th:attr="data-url=@{/notifications/recent},data-stream=@{/notifications/stream}">
 				<a th:href="@{/notifications}" class="icon-btn" th:classappend="${active == 'notifications'} ? 'active'" title="알림" aria-label="알림" aria-expanded="false">
 					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 8 2.5 8h-17S6 15 6 9"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/></svg>
 					<span class="noti-badge" th:if="${unreadNotifications > 0}" th:text="${unreadNotifications > 99} ? '99+' : ${unreadNotifications}">3</span>
@@ -74,6 +74,51 @@
 				});
 				document.addEventListener('click', function (e) { if (!box.contains(e.target)) close(); });
 				document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+			})();
+
+			// 실시간 알림: 새 알림이 오면 종 숫자를 바꾸고 오른쪽 아래에 잠깐 띄운다. 끊기면 브라우저가 다시 연결한다
+			(function () {
+				if (!window.EventSource) return;
+				var box = document.querySelector('[data-noti]');
+				var link = box.querySelector('a');
+				var toasts = document.createElement('div');
+				toasts.className = 'noti-toasts';
+				toasts.setAttribute('aria-live', 'polite');
+				document.body.appendChild(toasts);
+
+				function badge(count) {
+					var b = link.querySelector('.noti-badge');
+					if (count > 0) {
+						if (!b) { b = document.createElement('span'); b.className = 'noti-badge'; link.appendChild(b); }
+						b.textContent = count > 99 ? '99+' : String(count);
+					} else if (b) {
+						b.remove();
+					}
+				}
+
+				function toast(n) {
+					var a = document.createElement('a');
+					a.className = 'noti-toast';
+					a.href = n.url;
+					var head = document.createElement('strong');
+					head.textContent = n.category;
+					var text = document.createElement('span');
+					text.textContent = n.message;
+					a.appendChild(head);
+					a.appendChild(text);
+					toasts.appendChild(a);
+					setTimeout(function () { a.classList.add('hide'); }, 6000);
+					setTimeout(function () { a.remove(); }, 6500);
+				}
+
+				var source = new EventSource(box.dataset.stream);
+				source.addEventListener('count', function (e) { badge(JSON.parse(e.data).unread); });
+				source.addEventListener('notification', function (e) {
+					var n = JSON.parse(e.data);
+					badge(n.unread);
+					toast(n);
+				});
+				window.addEventListener('pagehide', function () { source.close(); });
 			})();
 		</script>
 	</header>
