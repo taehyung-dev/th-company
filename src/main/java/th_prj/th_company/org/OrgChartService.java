@@ -90,11 +90,20 @@ public class OrgChartService {
 	 * @param deptOf 그 사람의 부서 id (없으면 null)
 	 */
 	public <T> DeptView<T> deptView(List<T> rows, Function<T, Long> deptOf, Long departmentId, String loginId) {
+		return deptView(rows, deptOf, departmentId, loginId, true);
+	}
+
+	/**
+	 * @param includeDisabled false 면 사용자 화면(주소록 등)처럼 사용 안 함 부서와 그 하위 부서를 트리에서 뺀다
+	 */
+	public <T> DeptView<T> deptView(List<T> rows, Function<T, Long> deptOf, Long departmentId, String loginId,
+			boolean includeDisabled) {
 		Map<Long, List<T>> byDept = rows.stream().collect(Collectors.groupingBy(r -> {
 			Long id = deptOf.apply(r);
 			return id == null ? DeptView.NO_DEPT : id;
 		}));
-		List<OrgChart.Dept> depts = departmentService.tree().stream()
+		List<DepartmentRow> tree = includeDisabled ? departmentService.tree() : visibleRows(departmentService.tree());
+		List<OrgChart.Dept> depts = tree.stream()
 			.map(r -> new OrgChart.Dept(r.id(), r.name(), r.depth(),
 				byDept.getOrDefault(r.id(), List.of()).size(), r.enabled()))
 			.toList();

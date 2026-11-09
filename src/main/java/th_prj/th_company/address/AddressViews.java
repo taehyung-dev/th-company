@@ -12,7 +12,11 @@ public final class AddressViews {
 
 	/** 사내 주소록 한 줄 */
 	public record Employee(Long memberId, String name, String gradeName, String dutyName,
-			String deptName, String email, String phone) {
+			String deptName, String email, String phone, Long deptId, String photoUrl) {
+
+		public String initial() {
+			return name == null || name.isEmpty() ? "?" : name.substring(0, 1);
+		}
 	}
 
 	/** 부서 선택 목록 (트리 순서, depth 로 들여쓰기) */

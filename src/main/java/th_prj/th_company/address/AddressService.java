@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,6 +65,16 @@ public class AddressService {
 			.map(AddressService::toEmployee);
 	}
 
+	/**
+	 * 사내 주소록을 조직도 형식으로: 재직자 전체(검색어가 있으면 회사 전체에서 찾은 사람). 직책 → 직급 → 이름 순.
+	 */
+	public List<Employee> directory(String keyword) {
+		return memberRepository.searchDirectory(true, List.of(-1L), blankToNull(keyword), Pageable.unpaged()).stream()
+			.sorted(OrgChartService.MEMBER_ORDER)
+			.map(AddressService::toEmployee)
+			.toList();
+	}
+
 	private List<Long> withSubDepartments(Long departmentId) {
 		List<Long> ids = departmentService.withDescendants(departmentId);
 		return ids.isEmpty() ? List.of(-1L) : ids;
@@ -74,7 +85,8 @@ public class AddressService {
 			m.getGrade() == null ? null : m.getGrade().getName(),
 			m.getDuty() == null ? null : m.getDuty().getName(),
 			m.getDepartment() == null ? null : m.getDepartment().getName(),
-			m.getEmail(), m.getPhone());
+			m.getEmail(), m.getPhone(),
+			m.getDepartment() == null ? null : m.getDepartment().getId(), m.getPhotoUrl());
 	}
 
 	// ---- 개인 주소록 ----
