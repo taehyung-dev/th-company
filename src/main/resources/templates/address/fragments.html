@@ -4,6 +4,7 @@
 
 <!-- 주소록 좌측 메뉴: 사내 주소록 | 개인 주소록(전체, 즐겨찾기, 그룹) | 그룹 관리 -->
 <nav th:fragment="nav" class="board-tree approval-nav address-nav">
+	<div class="lnb-title">주소록</div>
 	<a class="btn-primary approval-new" th:href="@{/address/personal/new}">연락처 추가</a>
 	<a th:href="@{/address/company}" th:classappend="${menu == 'company'} ? 'active'"><span>사내 주소록</span></a>
 

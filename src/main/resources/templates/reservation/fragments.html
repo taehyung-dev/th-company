@@ -4,6 +4,7 @@
 
 <!-- 회의실 예약 / 자원 예약 좌측 메뉴: 예약 현황 | 내 예약 | 관리(그 구분의 관리 권한자) -->
 <nav th:fragment="nav" class="board-tree approval-nav res-nav">
+	<div class="lnb-title" th:text="${kind.label} + '예약'">회의실예약</div>
 	<a class="btn-primary approval-new" th:href="@{/reservations/{k}/new(k=${kind.path})}"
 	   th:text="${kind.label} + ' 예약하기'">회의실 예약하기</a>
 	<a th:href="@{/reservations/{k}(k=${kind.path})}" th:classappend="${menu == 'day'} ? 'active'"><span>예약 현황</span></a>

@@ -4,6 +4,7 @@
 
 <!-- 전자결재 좌측 메뉴: 결재하기 + 문서함 -->
 <nav th:fragment="nav" class="board-tree approval-nav">
+	<div class="lnb-title">전자결재</div>
 	<a class="btn-primary approval-new" th:href="@{/approval/new}">결재하기</a>
 	<a th:each="b : ${boxes}" th:href="@{/approval/box/{p}(p=${b.path})}"
 	   th:classappend="${menu == b.path} ? 'active'">

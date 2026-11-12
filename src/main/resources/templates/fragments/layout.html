@@ -8,10 +8,17 @@
 </head>
 <body>
 
-<!-- 상단 바(로고, 사용자) + 그 아래 메뉴 바. active 는 MainMenu.key (home / board / approval ...). 순서는 관리자 > 화면 > 사용자 메뉴 순서 -->
-<div th:fragment="topbar(active)" class="site-header">
+<!-- 상단 바 한 줄: 로고 | 아이콘 메뉴 | 사용자. active 는 MainMenu.key (home / board / approval ...). 순서는 관리자 > 화면 > 사용자 메뉴 순서 -->
+<div th:fragment="topbar(active)" class="site-header gnb">
 	<header class="topbar">
-		<a class="brand" th:href="@{/}">TH Company</a>
+		<a class="brand" th:href="@{/}"><span class="brand-mark" aria-hidden="true">TH</span><span class="brand-name">TH Company</span></a>
+		<nav class="menubar">
+			<a th:each="m : ${mainMenus}" th:href="${m.path != null} ? @{${m.path}} : '#'"
+			   th:classappend="${active == m.key} ? 'active'">
+				<svg th:replace="~{fragments/icons :: app(${m.key})}"></svg>
+				<span th:text="${m.label}">홈</span>
+			</a>
+		</nav>
 		<div class="topbar-right">
 			<span class="user-name" th:title="${currentUser}"><strong th:text="${currentUserName}">홍길동</strong> 님</span>
 			<!-- 알림: 누르면 최근 알림을 패널로 보여 준다. 스크립트가 없으면 링크대로 알림 화면으로 간다 -->
@@ -122,10 +129,6 @@
 			})();
 		</script>
 	</header>
-	<nav class="menubar">
-		<a th:each="m : ${mainMenus}" th:href="${m.path != null} ? @{${m.path}} : '#'"
-		   th:classappend="${active == m.key} ? 'active'" th:text="${m.label}">홈</a>
-	</nav>
 </div>
 
 </body>

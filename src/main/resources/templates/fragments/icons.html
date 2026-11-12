@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- 상단 메뉴 아이콘. key 는 MainMenu.key. 선 아이콘(24 그리드, stroke)으로 통일한다 -->
+<svg th:fragment="app(key)" class="gnb-icon" viewBox="0 0 24 24" aria-hidden="true" th:switch="${key}">
+	<th:block th:case="'home'"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h5v-6h4v6h5V10"/></th:block>
+	<th:block th:case="'board'"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></th:block>
+	<th:block th:case="'approval'"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 14l2 2 4-4"/></th:block>
+	<th:block th:case="'schedule'"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 14h2M14 14h2M8 17h2"/></th:block>
+	<th:block th:case="'room'"><path d="M4 21V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16"/><path d="M2 21h20"/><path d="M14 12h.01"/><path d="M9 7h6"/></th:block>
+	<th:block th:case="'reservation'"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></th:block>
+	<th:block th:case="'attendance'"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/><path d="M9 2h6"/></th:block>
+	<th:block th:case="'address'"><rect x="4" y="3" width="15" height="18" rx="2"/><circle cx="11.5" cy="10" r="2.5"/><path d="M7.5 17a4 4 0 0 1 8 0"/><path d="M19 7h2M19 12h2M19 17h2"/></th:block>
+	<th:block th:case="*"><circle cx="12" cy="12" r="8"/></th:block>
+</svg>
+
+</body>
+</html>

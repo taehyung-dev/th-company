@@ -4,6 +4,7 @@
 
 <!-- 근태관리 좌측 메뉴: 내 근태 | 전체 근태 현황(근태관리자) -->
 <nav th:fragment="nav" class="board-tree approval-nav attend-nav">
+	<div class="lnb-title">근태관리</div>
 	<a th:href="@{/attendance}" th:classappend="${menu == 'my'} ? 'active'"><span>내 근태</span></a>
 	<a th:href="@{/attendance/leave}" th:classappend="${menu == 'leave'} ? 'active'"><span>내 휴가</span></a>
 	<th:block th:if="${can.attendance}">
