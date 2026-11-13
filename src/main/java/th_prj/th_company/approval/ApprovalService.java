@@ -303,8 +303,7 @@ public class ApprovalService {
 	/** 다른 기능이 신청을 취소할 때 진행 중인 문서를 멈춘다 */
 	@Transactional
 	public void cancelLinked(Long docId) {
-		ApprovalDocument d = documentRepository.findById(docId)
-			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+		ApprovalDocument d = lock(docId);
 		if (!d.isLinked() || d.getStatus() != DocStatus.IN_PROGRESS) {
 			throw new BusinessException("진행 중인 문서가 아닙니다.");
 		}
@@ -657,8 +656,9 @@ public class ApprovalService {
 
 	@Transactional
 	public void approve(Long docId, String loginId, String comment) {
+		ApprovalDocument doc = lock(docId);
 		Member me = member(loginId);
-		List<ApprovalLine> lines = myTurn(docId, me);
+		List<ApprovalLine> lines = myTurn(doc, me);
 		ApprovalLine current = actionableLine(lines, me).orElseThrow();
 		current.decide(LineStatus.APPROVED, blankToNull(comment), deputyOf(current, me), false);
 
@@ -682,8 +682,9 @@ public class ApprovalService {
 	/** 전결: 본인 단계에서 최종 승인하고 뒤 단계는 건너뛴다 */
 	@Transactional
 	public void approveFinal(Long docId, String loginId, String comment) {
+		ApprovalDocument doc = lock(docId);
 		Member me = member(loginId);
-		List<ApprovalLine> lines = myTurn(docId, me);
+		List<ApprovalLine> lines = myTurn(doc, me);
 		ApprovalLine current = actionableLine(lines, me).orElseThrow();
 		if (deputyOf(current, me) != null) {
 			throw new BusinessException("대결자는 전결할 수 없습니다.");
@@ -696,7 +697,6 @@ public class ApprovalService {
 			throw new BusinessException("마지막 결재자는 [승인]으로 결재하세요.");
 		}
 		current.decide(LineStatus.APPROVED, blankToNull(comment), null, true);
-		ApprovalDocument doc = current.getDocument();
 		for (ApprovalLine l : later) {
 			l.skip();
 			notify(l.getApprover(), doc, me.getName() + " 님이 '" + doc.getTitle() + "' 문서를 전결했습니다.");
@@ -709,8 +709,9 @@ public class ApprovalService {
 		if (comment == null || comment.isBlank()) {
 			throw new BusinessException("반려 사유를 입력하세요.");
 		}
+		ApprovalDocument doc = lock(docId);
 		Member me = member(loginId);
-		List<ApprovalLine> lines = myTurn(docId, me);
+		List<ApprovalLine> lines = myTurn(doc, me);
 		ApprovalLine current = actionableLine(lines, me).orElseThrow();
 		current.decide(LineStatus.REJECTED, comment.trim(), deputyOf(current, me), false);
 		// 함께 합의하던 사람은 더 처리할 필요가 없다
@@ -720,8 +721,7 @@ public class ApprovalService {
 
 	@Transactional
 	public void withdraw(Long docId, String loginId) {
-		ApprovalDocument d = documentRepository.findById(docId)
-			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+		ApprovalDocument d = lock(docId);
 		if (!d.getDrafter().getLoginId().equals(loginId)) {
 			throw new AccessDeniedException("기안자만 회수할 수 있습니다.");
 		}
@@ -785,10 +785,22 @@ public class ApprovalService {
 		return line.getApprover().getId().equals(me.getId()) ? null : me;
 	}
 
-	private List<ApprovalLine> myTurn(Long docId, Member me) {
-		ApprovalDocument d = documentRepository.findById(docId)
+	/**
+	 * 문서 행을 잠근다 (select ... for update). 승인·전결·반려·회수·취소는 모두 이것부터 하므로,
+	 * 같은 문서에 동시에 들어온 처리는 앞의 것이 커밋될 때까지 기다렸다가 차례로 처리된다.
+	 * 병렬 합의자 두 명이 동시에 승인해도 뒤에 처리되는 쪽이 앞사람의 승인을 보고 다음 단계를 연다.
+	 * <p>
+	 * 트랜잭션의 첫 조회여야 한다. MariaDB(REPEATABLE READ)는 첫 일반 조회 시점의 스냅샷으로 이후를 읽으므로,
+	 * 잠금보다 먼저 다른 조회를 하면 잠금을 얻은 뒤에도 앞사람의 승인이 안 보일 수 있다.
+	 */
+	private ApprovalDocument lock(Long docId) {
+		return documentRepository.findForUpdate(docId)
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-		List<ApprovalLine> lines = lineRepository.findByDocument(docId);
+	}
+
+	/** 잠근 문서에서 지금 내 차례인지 확인하고 결재선을 돌려준다 */
+	private List<ApprovalLine> myTurn(ApprovalDocument d, Member me) {
+		List<ApprovalLine> lines = lineRepository.findByDocument(d.getId());
 		boolean mine = d.getStatus() == DocStatus.IN_PROGRESS && actionableLine(lines, me).isPresent();
 		if (!mine) {
 			throw new BusinessException("지금 결재할 차례가 아닙니다.");

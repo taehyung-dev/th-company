@@ -12,6 +12,11 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -127,6 +132,41 @@ class ApprovalAgreementTests {
 		assertThat(status(id)).isEqualTo(DocStatus.APPROVED);
 		assertThat(approvalService.view(id, drafter).agreementLines())
 			.extracting(DocView.LineView::statusLabel).containsOnly("합의");
+	}
+
+	/**
+	 * 병렬 합의자 두 명이 같은 순간에 승인해도 다음 단계(최종 결재자)가 열려야 한다.
+	 * 잠금이 없으면 두 트랜잭션이 서로의 승인을 못 보고 "아직 남은 합의자가 있다"고 판단해 문서가 멈춘다.
+	 * 타이밍에 따라 드러나는 문제라 여러 번 반복한다.
+	 */
+	@Test
+	void 병렬합의자가_동시에_승인해도_다음_단계가_열린다() throws Exception {
+		ExecutorService pool = Executors.newFixedThreadPool(2);
+		try {
+			for (int round = 1; round <= 5; round++) {
+				Long id = approvalService.submit(form("동시 합의 " + round, List.of(agreeA.getId(), agreeB.getId(), boss.getId()),
+					List.of(LineType.AGREE_PAR, LineType.AGREE_PAR, LineType.APPROVAL)), drafter);
+				CyclicBarrier together = new CyclicBarrier(2);
+				Future<?> a = pool.submit(() -> {
+					together.await();
+					approvalService.approve(id, agreeA.getLoginId(), null);
+					return null;
+				});
+				Future<?> b = pool.submit(() -> {
+					together.await();
+					approvalService.approve(id, agreeB.getLoginId(), null);
+					return null;
+				});
+				a.get(10, TimeUnit.SECONDS);
+				b.get(10, TimeUnit.SECONDS);
+
+				assertThat(pending(boss)).as("%d번째 동시 승인 후 최종 결재자 차례", round).contains(id);
+				assertThat(approvalService.view(id, drafter).agreementLines())
+					.extracting(DocView.LineView::status).containsOnly(LineStatus.APPROVED);
+			}
+		} finally {
+			pool.shutdownNow();
+		}
 	}
 
 	@Test

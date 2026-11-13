@@ -6,8 +6,11 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
+import jakarta.persistence.LockModeType;
 
 /**
  * 결재함별 문서 조회. 함 구분 규칙은 ApprovalBox 참고.
@@ -84,6 +87,14 @@ public interface ApprovalDocumentRepository extends JpaRepository<ApprovalDocume
 		where d.id = :id
 		""")
 	Optional<ApprovalDocument> findDetail(@Param("id") Long id);
+
+	/**
+	 * 결재 처리(승인·전결·반려·회수·취소) 전에 문서 행을 잠근다.
+	 * 같은 문서에 동시에 들어온 처리가 서로의 결과를 못 본 채 저장되지 않게 한다 (예: 병렬 합의 동시 승인).
+	 */
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select d from ApprovalDocument d where d.id = :id")
+	Optional<ApprovalDocument> findForUpdate(@Param("id") Long id);
 
 	/** 이 문서로 재기안해 아직 보관함에 있는 문서 */
 	Optional<ApprovalDocument> findFirstByRedraftedFromIdAndStatus(Long originId, DocStatus status);
