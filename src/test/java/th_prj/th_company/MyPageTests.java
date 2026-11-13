@@ -70,7 +70,7 @@ class MyPageTests {
 	}
 
 	@Test
-	void topbarIcon_andMyPageShowsProfileAndStatus() throws Exception {
+	void 상단_아이콘으로_마이페이지를_열면_프로필과_상태가_보인다() throws Exception {
 		MockHttpSession s = login(loginId, "pw");
 		mvc.perform(get("/").session(s))
 			.andExpect(content().string(containsString("aria-label=\"마이페이지\"")));
@@ -84,7 +84,7 @@ class MyPageTests {
 	}
 
 	@Test
-	void editContactAddressAndPhoto_butNotHrFields() throws Exception {
+	void 연락처_주소_사진은_고치지만_인사정보는_못_고친다() throws Exception {
 		MockHttpSession s = login(loginId, "pw");
 		mvc.perform(get("/my/edit").session(s))
 			.andExpect(status().isOk())
@@ -119,7 +119,7 @@ class MyPageTests {
 	}
 
 	@Test
-	void duplicateEmailRejected() throws Exception {
+	void 중복_이메일은_거부된다() throws Exception {
 		String otherId = "myo" + UUID.randomUUID().toString().substring(0, 6);
 		Member other = new Member(otherId, passwordEncoder.encode("pw"), "남", Role.USER);
 		other.updateProfile("남", null, otherId + "@test.local", null, null, null, null, null);
@@ -133,7 +133,7 @@ class MyPageTests {
 	}
 
 	@Test
-	void changePassword_validatesAndThenNewPasswordWorks() throws Exception {
+	void 비밀번호_변경은_검사를_거치고_새_비밀번호로_로그인된다() throws Exception {
 		MockHttpSession s = login(loginId, "pw");
 		mvc.perform(get("/my/password").session(s)).andExpect(status().isOk());
 
@@ -156,7 +156,7 @@ class MyPageTests {
 	}
 
 	@Test
-	void loginRequired() throws Exception {
+	void 로그인이_필요하다() throws Exception {
 		mvc.perform(get("/my")).andExpect(status().is3xxRedirection());
 	}
 }

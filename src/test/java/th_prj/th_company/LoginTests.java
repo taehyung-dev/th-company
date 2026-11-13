@@ -24,33 +24,33 @@ class LoginTests {
 	private MockMvc mvc;
 
 	@Test
-	void loginPageIsPublic() throws Exception {
+	void 로그인_화면은_누구나_열_수_있다() throws Exception {
 		mvc.perform(get("/login")).andExpect(status().isOk());
 	}
 
 	@Test
-	void mainRequiresLogin() throws Exception {
+	void 홈은_로그인이_필요하다() throws Exception {
 		mvc.perform(get("/"))
 			.andExpect(status().is3xxRedirection())
 			.andExpect(redirectedUrl("/login"));
 	}
 
 	@Test
-	void sysadminCanLogin() throws Exception {
+	void 시스템관리자가_로그인할_수_있다() throws Exception {
 		mvc.perform(formLogin("/login").user("sysadmin").password("a"))
 			.andExpect(authenticated().withUsername("sysadmin"))
 			.andExpect(redirectedUrl("/"));
 	}
 
 	@Test
-	void wrongPasswordFails() throws Exception {
+	void 비밀번호가_틀리면_실패한다() throws Exception {
 		mvc.perform(formLogin("/login").user("sysadmin").password("wrong"))
 			.andExpect(unauthenticated())
 			.andExpect(redirectedUrl("/login?error"));
 	}
 
 	@Test
-	void mainRendersAfterLogin() throws Exception {
+	void 로그인_뒤_홈이_열린다() throws Exception {
 		MockHttpSession session = (MockHttpSession) mvc
 			.perform(formLogin("/login").user("sysadmin").password("a"))
 			.andReturn().getRequest().getSession();

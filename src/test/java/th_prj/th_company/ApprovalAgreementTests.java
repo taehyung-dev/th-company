@@ -97,7 +97,7 @@ class ApprovalAgreementTests {
 	}
 
 	@Test
-	void parallelAgreementWaitsForEveryoneThenGoesToApprover() {
+	void 병렬합의는_모두_처리해야_결재자에게_넘어간다() {
 		Long id = approvalService.submit(form("병렬 합의", List.of(agreeA.getId(), agreeB.getId(), boss.getId()),
 			List.of(LineType.AGREE_PAR, LineType.AGREE_PAR, LineType.APPROVAL)), drafter);
 
@@ -130,7 +130,7 @@ class ApprovalAgreementTests {
 	}
 
 	@Test
-	void sequentialAgreementGoesOneByOne() {
+	void 순차합의는_한_명씩_차례로_진행된다() {
 		Long id = approvalService.submit(form("순차 합의", List.of(agreeA.getId(), agreeB.getId(), boss.getId()),
 			List.of(LineType.AGREE_SEQ, LineType.AGREE_SEQ, LineType.APPROVAL)), drafter);
 
@@ -146,7 +146,7 @@ class ApprovalAgreementTests {
 	}
 
 	@Test
-	void approvalThenParallelThenSequentialKeepsOrder() {
+	void 결재_병렬합의_순차합의를_섞어도_순서를_지킨다() {
 		// 결재 → 병렬(A, B) → 순차(C) → 최종 결재
 		Member first = agreeC;
 		Member last = member("last" + UUID.randomUUID().toString().substring(0, 6), "사장",
@@ -166,7 +166,7 @@ class ApprovalAgreementTests {
 	}
 
 	@Test
-	void agreerRejectingRejectsDocumentAndStopsOthers() {
+	void 합의자가_반려하면_문서가_반려되고_나머지는_멈춘다() {
 		Long id = approvalService.submit(form("합의 반려", List.of(agreeA.getId(), agreeB.getId(), boss.getId()),
 			List.of(LineType.AGREE_PAR, LineType.AGREE_PAR, LineType.APPROVAL)), drafter);
 
@@ -184,7 +184,7 @@ class ApprovalAgreementTests {
 	}
 
 	@Test
-	void agreerCannotFinalApprove_andLastMustBeApprover() {
+	void 합의자는_전결할_수_없고_마지막은_결재자여야_한다() {
 		Long id = approvalService.submit(form("전결 불가", List.of(agreeA.getId(), boss.getId()),
 			List.of(LineType.AGREE_SEQ, LineType.APPROVAL)), drafter);
 		assertThatThrownBy(() -> approvalService.approveFinal(id, agreeA.getLoginId(), null))
@@ -200,7 +200,7 @@ class ApprovalAgreementTests {
 	}
 
 	@Test
-	void documentPageShowsAgreementBoxAndAgreeButton() throws Exception {
+	void 문서_화면에_합의란과_합의_버튼이_보인다() throws Exception {
 		Long id = approvalService.submit(form("화면 확인", List.of(agreeA.getId(), boss.getId()),
 			List.of(LineType.AGREE_SEQ, LineType.APPROVAL)), drafter);
 		MockHttpSession session = (MockHttpSession) mvc.perform(formLogin("/login").user(agreeA.getLoginId()).password("pw"))
@@ -211,7 +211,7 @@ class ApprovalAgreementTests {
 	}
 
 	@Test
-	void documentDownloadsAsPdf_withKoreanTextAndBothStampBoxes_onlyForPeopleWhoCanSeeIt() throws Exception {
+	void 문서를_볼_수_있는_사람만_한글과_결재란_합의란이_든_PDF를_받는다() throws Exception {
 		Long id = approvalService.submit(form("PDF 확인/견적", List.of(agreeA.getId(), boss.getId()),
 			List.of(LineType.AGREE_SEQ, LineType.APPROVAL)), drafter);
 		approvalService.approve(id, agreeA.getLoginId(), "검토했습니다");

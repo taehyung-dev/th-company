@@ -88,7 +88,7 @@ class ScheduleTests {
 	}
 
 	@Test
-	void visibilityByType() {
+	void 일정_종류별_공개범위() {
 		LocalDate day = MONTH.atDay(10);
 		scheduleService.save(form(ScheduleType.COMPANY, "창립기념일", day, day, true), "sysadmin", true);
 		scheduleService.save(form(ScheduleType.DEPARTMENT, "A팀 회의", day, day, false), alice, false);
@@ -100,7 +100,7 @@ class ScheduleTests {
 	}
 
 	@Test
-	void permissionRules() {
+	void 일정_권한_규칙() {
 		LocalDate day = MONTH.atDay(12);
 		assertThatThrownBy(() -> scheduleService.save(form(ScheduleType.COMPANY, "x", day, day, true), alice, false))
 			.isInstanceOf(BusinessException.class).hasMessageContaining("관리자만");
@@ -122,7 +122,7 @@ class ScheduleTests {
 	}
 
 	@Test
-	void multiDayScheduleAppearsOnEveryDay() {
+	void 여러_날_일정은_날마다_보인다() {
 		LocalDate start = MONTH.atDay(20);
 		scheduleService.save(form(ScheduleType.PERSONAL, "출장", start, start.plusDays(2), true), alice, false);
 
@@ -136,7 +136,7 @@ class ScheduleTests {
 	}
 
 	@Test
-	void pagesRender() throws Exception {
+	void 일정_화면이_열린다() throws Exception {
 		MockHttpSession session = (MockHttpSession) mvc.perform(formLogin("/login").user(alice).password("pw"))
 			.andReturn().getRequest().getSession();
 		mvc.perform(get("/schedule").param("ym", MONTH.toString()).session(session))

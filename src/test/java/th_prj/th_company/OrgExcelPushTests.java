@@ -75,7 +75,7 @@ class OrgExcelPushTests {
 	}
 
 	@Test
-	void attendanceAndAddressBook_showDepartmentTree_andMembersOfSelectedDepartment() throws Exception {
+	void 근태와_주소록은_부서트리와_고른_부서_인원을_보여준다() throws Exception {
 		MockHttpSession s = login(manager);
 		mvc.perform(get("/attendance/manage").session(s).param("dept", team.getId().toString()))
 			.andExpect(status().isOk())
@@ -94,7 +94,7 @@ class OrgExcelPushTests {
 	}
 
 	@Test
-	void excelDownloads_areValidXlsx_withEveryone() throws Exception {
+	void 엑셀_다운로드는_전원이_든_올바른_xlsx다() throws Exception {
 		MockHttpSession s = login(manager);
 		Map<String, String> attendance = unzip(mvc.perform(get("/attendance/manage/excel").session(s)
 				.param("date", "2031-05-14"))
@@ -118,7 +118,7 @@ class OrgExcelPushTests {
 	}
 
 	@Test
-	void notificationStream_sendsUnreadCountOnConnect_andNewNotificationAfterSave() throws Exception {
+	void 알림_스트림은_연결하면_안읽은_수를_보내고_저장_뒤_새_알림을_보낸다() throws Exception {
 		MockHttpSession s = login(worker);
 		MvcResult stream = mvc.perform(get("/notifications/stream").session(s))
 			.andExpect(request().asyncStarted())

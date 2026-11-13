@@ -87,13 +87,13 @@ class ApprovalTests {
 	}
 
 	@Test
-	void proposalTemplateIsSeeded() {
+	void 품의서_양식이_기본으로_들어있다() {
 		assertThat(approvalService.templates()).extracting("name").contains("품의서");
 		assertThat(approvalService.newDraft(templateId()).getContent()).contains("1. 목적");
 	}
 
 	@Test
-	void twoStepApproval_movesThroughBoxes() {
+	void 두_단계_결재가_문서함을_따라_이동한다() {
 		Long id = approvalService.submit(form("노트북 구매 품의", List.of(first.getId(), second.getId())), drafter);
 
 		assertThat(documentRepository.findById(id).orElseThrow().getDocNo())
@@ -125,7 +125,7 @@ class ApprovalTests {
 	}
 
 	@Test
-	void rejectNeedsReason_andEndsDocument() {
+	void 반려는_사유가_필요하고_문서를_끝낸다() {
 		Long id = approvalService.submit(form("반려될 문서", List.of(first.getId(), second.getId())), drafter);
 
 		assertThatThrownBy(() -> approvalService.reject(id, first.getLoginId(), " "))
@@ -140,7 +140,7 @@ class ApprovalTests {
 	}
 
 	@Test
-	void withdrawOnlyBeforeAnyApproval_thenEditAndResubmit() {
+	void 아무도_결재하기_전에만_회수하고_수정해_다시_상신한다() {
 		Long id = approvalService.submit(form("회수할 문서", List.of(first.getId(), second.getId())), drafter);
 		approvalService.withdraw(id, drafter);
 		assertThat(box(ApprovalBox.DRAFTS, drafter)).contains(id);
@@ -159,7 +159,7 @@ class ApprovalTests {
 	}
 
 	@Test
-	void draftRulesAndPermissions() {
+	void 기안_규칙과_권한() {
 		// 결재선 없이 임시저장은 가능, 상신은 불가
 		Long draftId = approvalService.saveDraft(form("임시", List.of()), drafter);
 		assertThat(box(ApprovalBox.DRAFTS, drafter)).contains(draftId);
@@ -183,7 +183,7 @@ class ApprovalTests {
 	}
 
 	@Test
-	void pagesRenderAndApproveThroughWeb() throws Exception {
+	void 화면이_열리고_웹에서_결재할_수_있다() throws Exception {
 		MockHttpSession drafterSession = (MockHttpSession) mvc.perform(formLogin("/login").user(drafter).password("pw"))
 			.andReturn().getRequest().getSession();
 		for (ApprovalBox b : ApprovalBox.values()) {

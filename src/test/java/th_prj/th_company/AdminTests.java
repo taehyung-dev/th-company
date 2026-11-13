@@ -49,7 +49,7 @@ class AdminTests {
 	}
 
 	@Test
-	void adminPagesRender() throws Exception {
+	void 관리자_화면이_열린다() throws Exception {
 		MockHttpSession admin = login("sysadmin", "a");
 		mvc.perform(get("/admin").session(admin)).andExpect(status().is3xxRedirection());
 		mvc.perform(get("/admin/members").session(admin)).andExpect(status().isOk());
@@ -61,7 +61,7 @@ class AdminTests {
 	}
 
 	@Test
-	void createMemberWithDepartmentAndGrade_thenMemberCanLoginButNotOpenAdmin() throws Exception {
+	void 부서와_직급으로_사용자를_만들면_로그인은_되지만_관리자화면은_못_연다() throws Exception {
 		MockHttpSession admin = login("sysadmin", "a");
 
 		mvc.perform(post("/admin/departments").session(admin).with(csrf())
@@ -101,7 +101,7 @@ class AdminTests {
 	}
 
 	@Test
-	void duplicateLoginIdIsRejected() throws Exception {
+	void 중복_아이디는_거부된다() throws Exception {
 		MockHttpSession admin = login("sysadmin", "a");
 		mvc.perform(post("/admin/members").session(admin).with(csrf())
 				.param("loginId", "sysadmin").param("password", "x").param("name", "중복")
@@ -111,7 +111,7 @@ class AdminTests {
 	}
 
 	@Test
-	void duplicateCheckButtonAndSaveRules_forLoginIdEmployeeNoEmail() throws Exception {
+	void 아이디_사번_이메일의_중복확인_버튼과_저장_규칙() throws Exception {
 		MockHttpSession admin = login("sysadmin", "a");
 		mvc.perform(post("/admin/members").session(admin).with(csrf())
 				.param("loginId", "dupcheck").param("password", "pw").param("name", "중복원본")
@@ -160,7 +160,7 @@ class AdminTests {
 	}
 
 	@Test
-	void departmentCannotMoveUnderItsOwnChild() throws Exception {
+	void 부서를_자기_하위부서_밑으로_옮길_수_없다() throws Exception {
 		Department parent = departmentRepository.save(new Department("본부A", null, 0));
 		Department child = departmentRepository.save(new Department("팀A", parent, 0));
 		MockHttpSession admin = login("sysadmin", "a");
@@ -173,7 +173,7 @@ class AdminTests {
 	}
 
 	@Test
-	void adminCannotDisableOwnAccount() throws Exception {
+	void 관리자는_자기_계정을_사용중지할_수_없다() throws Exception {
 		Member sysadmin = memberRepository.findByLoginId("sysadmin").orElseThrow();
 		MockHttpSession admin = login("sysadmin", "a");
 
@@ -187,7 +187,7 @@ class AdminTests {
 	}
 
 	@Test
-	void duplicateCodeNameIsRejected() throws Exception {
+	void 중복_코드이름은_거부된다() throws Exception {
 		hrCodeRepository.save(new HrCode(HrCodeType.DUTY, "팀장", 1));
 		MockHttpSession admin = login("sysadmin", "a");
 

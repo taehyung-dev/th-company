@@ -89,7 +89,7 @@ class ReservationTests {
 	}
 
 	@Test
-	void roomReservation_overlapRejected_backToBackAllowed_onlyOwnerChanges() throws Exception {
+	void 회의실예약은_겹치면_거부하고_이어붙이기는_되며_예약자만_바꾼다() throws Exception {
 		Resource room = resource(ResourceType.ROOM, "테스트룸");
 		MockHttpSession a = login(user("resa"), "pw");
 		MockHttpSession b = login(user("resb"), "pw");
@@ -166,7 +166,7 @@ class ReservationTests {
 	}
 
 	@Test
-	void resourceManager_managesOnlyResources_roomManagerOnlyRooms() throws Exception {
+	void 자원관리자는_자원만_회의실관리자는_회의실만_관리한다() throws Exception {
 		MockHttpSession plain = login(user("resp"), "pw");
 		mvc.perform(get("/admin/resources").session(plain)).andExpect(status().isForbidden());
 		mvc.perform(get("/admin/rooms").session(plain)).andExpect(status().isForbidden());
@@ -242,7 +242,7 @@ class ReservationTests {
 	}
 
 	@Test
-	void menusAndEmptyDayBoard() throws Exception {
+	void 예약_메뉴와_빈_날짜_현황판() throws Exception {
 		MockHttpSession s = login("sysadmin", "a");
 		mvc.perform(get("/reservations").session(s)).andExpect(redirectedUrl("/reservations/rooms"));
 		mvc.perform(get("/reservations/rooms").session(s).param("date", "2040-01-07"))

@@ -130,7 +130,7 @@ class CollaborationTests {
 	}
 
 	@Test
-	void memberWithWaitingApprovalCannotBeDisabled() throws Exception {
+	void 결재_대기_문서가_있는_사람은_사용중지할_수_없다() throws Exception {
 		MockHttpSession admin = login("sysadmin", "a");
 		Long id = approvalService.submit(form("대기 문서", first.getId(), second.getId()), drafter.getLoginId());
 
@@ -148,7 +148,7 @@ class CollaborationTests {
 	}
 
 	@Test
-	void withdrawnDocumentNoLongerBlocksDisabling() throws Exception {
+	void 회수한_문서는_사용중지를_막지_않는다() throws Exception {
 		Long id = approvalService.submit(form("회수할 문서", first.getId()), drafter.getLoginId());
 		approvalService.withdraw(id, drafter.getLoginId());
 		disable(first, login("sysadmin", "a"), false);
@@ -157,7 +157,7 @@ class CollaborationTests {
 	// ---------- 2. 재기안 ----------
 
 	@Test
-	void redraftCopiesRejectedDocument() throws Exception {
+	void 재기안은_반려된_문서를_복사한다() throws Exception {
 		DraftForm original = form("반려 문서", first.getId(), second.getId());
 		original.setCcIds(List.of(member("cc", dept).getId()));
 		Long id = approvalService.submit(original, drafter.getLoginId(),
@@ -195,7 +195,7 @@ class CollaborationTests {
 	}
 
 	@Test
-	void redraftDropsDisabledApprover_andWorksThroughWeb() throws Exception {
+	void 재기안은_사용중지된_결재자를_빼고_웹에서도_된다() throws Exception {
 		Long id = approvalService.submit(form("결재자 퇴사", first.getId(), second.getId()), drafter.getLoginId());
 		approvalService.reject(id, first.getLoginId(), "다시");
 		disable(second, login("sysadmin", "a"), false);
@@ -216,7 +216,7 @@ class CollaborationTests {
 	// ---------- 3. 일괄결재 ----------
 
 	@Test
-	void bulkApproveHandlesEachDocumentSeparately() throws Exception {
+	void 일괄승인은_문서마다_따로_처리한다() throws Exception {
 		Long a = approvalService.submit(form("일괄 1", first.getId()), drafter.getLoginId());
 		Long b = approvalService.submit(form("일괄 2", first.getId(), second.getId()), drafter.getLoginId());
 		Long notMine = approvalService.submit(form("남의 문서", second.getId()), drafter.getLoginId());
@@ -241,7 +241,7 @@ class CollaborationTests {
 	}
 
 	@Test
-	void bulkButtonOnlyInPendingBox() throws Exception {
+	void 일괄승인_버튼은_미결문서함에만_있다() throws Exception {
 		approvalService.submit(form("목록 문서", first.getId()), drafter.getLoginId());
 		mvc.perform(get("/approval/box/progress").session(login(drafter)))
 			.andExpect(content().string(containsString("결재상태 보기")))
@@ -251,7 +251,7 @@ class CollaborationTests {
 	// ---------- 4. 결재상태 ----------
 
 	@Test
-	void statusPanelShowsLines_andChecksPermission() throws Exception {
+	void 결재현황_창은_결재선을_보여주고_권한을_검사한다() throws Exception {
 		Long id = approvalService.submit(form("상태 볼 문서", first.getId(), second.getId()), drafter.getLoginId());
 		approvalService.approve(id, first.getLoginId(), "확인");
 
@@ -269,7 +269,7 @@ class CollaborationTests {
 	// ---------- 5. 인쇄 ----------
 
 	@Test
-	void documentHasPrintButton() throws Exception {
+	void 문서에_인쇄_버튼이_있다() throws Exception {
 		Long id = approvalService.submit(form("인쇄 문서", first.getId()), drafter.getLoginId());
 		mvc.perform(get("/approval/docs/{id}", id).session(login(drafter)))
 			.andExpect(content().string(containsString("window.print()")));
@@ -282,7 +282,7 @@ class CollaborationTests {
 	}
 
 	@Test
-	void attendeesAreNotified_andSeeReservation() throws Exception {
+	void 참석자에게_알림이_가고_예약을_볼_수_있다() throws Exception {
 		Resource room = room();
 		MockHttpSession session = login(drafter);
 		mvc.perform(get("/reservations/rooms/new").session(session))
@@ -328,7 +328,7 @@ class CollaborationTests {
 	}
 
 	@Test
-	void repeatedReservationNotifiesOnce() throws Exception {
+	void 반복예약은_알림을_한_번만_보낸다() throws Exception {
 		Resource room = room();
 		mvc.perform(post("/reservations").session(login(drafter)).with(csrf()).param("kind", "ROOM")
 				.param("resourceId", room.getId().toString()).param("date", DAY.toString())
@@ -342,7 +342,7 @@ class CollaborationTests {
 	}
 
 	@Test
-	void unknownAttendeeIsRejected() throws Exception {
+	void 없는_참석자는_거부된다() throws Exception {
 		Resource room = room();
 		mvc.perform(post("/reservations").session(login(drafter)).with(csrf()).param("kind", "ROOM")
 				.param("resourceId", room.getId().toString()).param("date", DAY.toString())
@@ -367,7 +367,7 @@ class CollaborationTests {
 	}
 
 	@Test
-	void scheduleNotifiesOnlyWhenChecked() {
+	void 일정은_알림을_체크했을_때만_알린다() {
 		String quiet = "조용한 일정" + suffix;
 		String loud = "알릴 일정" + suffix;
 		scheduleService.save(schedule(ScheduleType.PERSONAL, quiet, false, first.getId()), drafter.getLoginId(), false);
@@ -390,7 +390,7 @@ class CollaborationTests {
 	}
 
 	@Test
-	void departmentScheduleNotifiesDepartment_companyNotifiesEveryone() {
+	void 부서일정은_부서에_회사일정은_모두에게_알린다() {
 		String deptTitle = "부서 일정" + suffix;
 		String companyTitle = "회사 일정" + suffix;
 		Department other = departmentRepository.save(new Department("다른팀" + suffix, null, 0));
@@ -410,7 +410,7 @@ class CollaborationTests {
 	}
 
 	@Test
-	void schedulePagesShowParticipantControls() throws Exception {
+	void 일정_화면에_참석자_선택이_있다() throws Exception {
 		Long id = scheduleService.save(schedule(ScheduleType.PERSONAL, "화면 일정", false, first.getId()), drafter.getLoginId(), false);
 		MockHttpSession session = login(drafter);
 		mvc.perform(get("/schedule/new").session(session))
@@ -430,7 +430,7 @@ class CollaborationTests {
 	// ---------- 8. 관리자 메뉴 ----------
 
 	@Test
-	void adminMenuShowsOnlyCurrentSectionOnLeft() throws Exception {
+	void 관리자_왼쪽메뉴는_지금_구역만_보여준다() throws Exception {
 		MockHttpSession admin = login("sysadmin", "a");
 		mvc.perform(get("/admin/members").session(admin))
 			.andExpect(content().string(containsString("인사정보")))
@@ -444,7 +444,7 @@ class CollaborationTests {
 	}
 
 	@Test
-	void adminMenuFollowsPermissions() throws Exception {
+	void 관리자_메뉴는_권한을_따른다() throws Exception {
 		String html = mvc.perform(get("/admin/boards").session(login(member("boardman", dept, Permission.BOARD_MANAGER))))
 			.andExpect(status().isOk())
 			.andReturn().getResponse().getContentAsString();
@@ -452,7 +452,7 @@ class CollaborationTests {
 	}
 
 	@Test
-	void attendancePagesRenderInsideAdminAndAttendanceMenus() throws Exception {
+	void 근태_화면이_관리자와_근태_메뉴_안에서_열린다() throws Exception {
 		MockHttpSession admin = login("sysadmin", "a");
 		mvc.perform(get("/admin/attendance/holidays").session(admin))
 			.andExpect(status().isOk())
@@ -481,7 +481,7 @@ class CollaborationTests {
 	// ---------- 사람 목록을 조직도처럼 ----------
 
 	@Test
-	void memberAdminShowsSelectedDepartmentLikeOrgChart() throws Exception {
+	void 사용자관리는_조직도처럼_고른_부서를_보여준다() throws Exception {
 		Department other = departmentRepository.save(new Department("다른팀" + suffix, null, 1));
 		Member outsider = member("outsider", other);
 		MockHttpSession admin = login("sysadmin", "a");
@@ -507,7 +507,7 @@ class CollaborationTests {
 	}
 
 	@Test
-	void leaveManageShowsSelectedDepartmentAndStaysThereAfterSaving() throws Exception {
+	void 휴가관리는_고른_부서를_보여주고_저장_뒤에도_그_부서에_머문다() throws Exception {
 		Department other = departmentRepository.save(new Department("다른팀" + suffix, null, 1));
 		Member outsider = member("outsider", other);
 		MockHttpSession admin = login("sysadmin", "a");
@@ -525,7 +525,7 @@ class CollaborationTests {
 	}
 
 	@Test
-	void personInDisabledDepartmentStaysVisibleOnManageScreens() throws Exception {
+	void 사용중지된_부서의_사람도_관리화면에_보인다() throws Exception {
 		Department closed = new Department("폐지팀" + suffix, null, 1);
 		closed.update(closed.getName(), null, 1, false);
 		departmentRepository.save(closed);

@@ -66,7 +66,7 @@ class PermissionWiringTests {
 	}
 
 	@Test
-	void plainUser_hasNoAdminIcon_andCannotOpenAnyAdminScreen() throws Exception {
+	void 일반사용자는_관리자_아이콘이_없고_어떤_관리자화면도_못_연다() throws Exception {
 		MockHttpSession s = login(user("plain"));
 		mvc.perform(get("/").session(s)).andExpect(content().string(org.hamcrest.Matchers.not(containsString("관리자 페이지"))));
 		mvc.perform(get("/admin").session(s)).andExpect(status().isForbidden());
@@ -76,7 +76,7 @@ class PermissionWiringTests {
 	}
 
 	@Test
-	void boardManager_managesBoardsAndOthersPosts_butNotOtherAdminScreens() throws Exception {
+	void 게시판관리자는_게시판과_남의_글을_관리하지만_다른_관리자화면은_못_연다() throws Exception {
 		MockHttpSession manager = login(user("bm", Permission.BOARD_MANAGER));
 		mvc.perform(get("/").session(manager)).andExpect(content().string(containsString("관리자 페이지")));
 		mvc.perform(get("/admin").session(manager)).andExpect(redirectedUrl("/admin/boards"));
@@ -111,7 +111,7 @@ class PermissionWiringTests {
 	}
 
 	@Test
-	void scheduleManager_canAddCompanySchedule_plainUserCannot() throws Exception {
+	void 일정관리자는_회사일정을_넣고_일반사용자는_못_넣는다() throws Exception {
 		LocalDate day = LocalDate.of(2032, 3, 10);
 		MockHttpSession manager = login(user("sm", Permission.SCHEDULE_MANAGER));
 		mvc.perform(post("/schedule").session(manager).with(csrf())
@@ -128,7 +128,7 @@ class PermissionWiringTests {
 	}
 
 	@Test
-	void attendanceManager_opensManageScreen_andApprovalManagerOpensTemplates() throws Exception {
+	void 근태관리자는_근태관리를_결재양식관리자는_양식관리를_연다() throws Exception {
 		MockHttpSession am = login(user("am", Permission.ATTENDANCE_MANAGER));
 		mvc.perform(get("/attendance/manage").session(am))
 			.andExpect(status().isOk())

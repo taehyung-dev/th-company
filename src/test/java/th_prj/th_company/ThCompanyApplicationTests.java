@@ -7,7 +7,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 class ThCompanyApplicationTests {
 
 	@Test
-	void contextLoads() {
+	void 스프링_컨텍스트가_뜬다() {
 	}
 
 }

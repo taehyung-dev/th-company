@@ -90,7 +90,7 @@ class ApprovalTemplateTests {
 	}
 
 	@Test
-	void adminBuildsTemplateWithFields_userDraftsWithValues_andDocKeepsSnapshot() throws Exception {
+	void 관리자가_입력항목_양식을_만들고_사용자가_값을_넣어_기안하면_문서는_당시_양식을_보존한다() throws Exception {
 		MockHttpSession admin = login("sysadmin", "a");
 		String code = "휴" + suffix.replaceAll("[^a-z0-9]", "");
 
@@ -186,7 +186,7 @@ class ApprovalTemplateTests {
 	}
 
 	@Test
-	void unusedTemplateCanBeDeleted_andPlainUsersCannotManage() throws Exception {
+	void 쓰지_않은_양식만_삭제되고_일반사용자는_관리할_수_없다() throws Exception {
 		MockHttpSession admin = login("sysadmin", "a");
 		String code = "삭" + suffix.replaceAll("[^a-z0-9]", "");
 		String location = mvc.perform(leaveTemplate(admin, code)).andReturn().getResponse().getRedirectedUrl();

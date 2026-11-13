@@ -129,7 +129,7 @@ class GroupwareFeatureTests {
 	// ---------- 알림 ----------
 
 	@Test
-	void bellSitsLeftOfMyPage_andNotificationsAreOwnedAndMarkedRead() throws Exception {
+	void 종은_마이페이지_왼쪽에_있고_알림은_본인_것만_보며_읽음처리된다() throws Exception {
 		Member drafter = user("nd");
 		Member approver = user("na");
 		MockHttpSession s = login(approver);
@@ -159,7 +159,7 @@ class GroupwareFeatureTests {
 	// ---------- 공휴일, 휴가 ----------
 
 	@Test
-	void holidayIsNotAbsent_andOnlyAttendanceManagerManagesIt() throws Exception {
+	void 공휴일은_미출근이_아니고_근태관리자만_관리한다() throws Exception {
 		LocalDate day = LocalDate.of(2025, 3, 12);
 		mvc.perform(get("/attendance/manage/holidays").session(login(user("hp")))).andExpect(status().isForbidden());
 
@@ -200,7 +200,7 @@ class GroupwareFeatureTests {
 	}
 
 	@Test
-	void leaveGoesThroughApproval_excludesWeekends_andCountsInAttendance() throws Exception {
+	void 휴가는_전자결재를_거치고_주말을_빼며_근태에_반영된다() throws Exception {
 		Member me = user("lv");
 		me.updateProfile("lv", null, null, null, null, null, null, LocalDate.of(2020, 1, 1));
 		memberRepository.save(me);
@@ -248,7 +248,7 @@ class GroupwareFeatureTests {
 	}
 
 	@Test
-	void pendingLeaveCancelStopsDocument_rejectedLeaveFreesDays_andBalanceIsEnforced() throws Exception {
+	void 진행중_휴가를_취소하면_문서가_멈추고_반려되면_일수가_돌아오며_잔여일수를_넘을_수_없다() throws Exception {
 		Member me = user("lc");
 		Member boss = user("lcb");
 		MockHttpSession s = login(me);
@@ -292,7 +292,7 @@ class GroupwareFeatureTests {
 	}
 
 	@Test
-	void annualDaysFollowHireDate() {
+	void 연차일수는_입사일을_따른다() {
 		LocalDate today = LocalDate.of(2026, 7, 15);
 		assertThat(LeaveService.autoDays(null, 2026, today)).isEqualTo(15);
 		assertThat(LeaveService.autoDays(LocalDate.of(2026, 3, 1), 2026, today)).isEqualTo(4);
@@ -308,7 +308,7 @@ class GroupwareFeatureTests {
 	}
 
 	@Test
-	void approvalFiles_onlyPeopleWhoCanSeeTheDocumentCanDownload() throws Exception {
+	void 결재_첨부파일은_문서를_볼_수_있는_사람만_받는다() throws Exception {
 		Member me = user("fa");
 		Member boss = user("fb");
 		Member stranger = user("fs");
@@ -331,7 +331,7 @@ class GroupwareFeatureTests {
 	}
 
 	@Test
-	void scheduleAndReservationFiles_addRemoveAndDeleteWithOwner() throws Exception {
+	void 일정과_예약_첨부파일은_추가_삭제되고_원본과_함께_지워진다() throws Exception {
 		Member me = user("fc");
 		MockHttpSession s = login(me);
 		LocalDate day = LocalDate.now().plusDays(20);
@@ -370,7 +370,7 @@ class GroupwareFeatureTests {
 	// ---------- 참조자, 대결, 전결 ----------
 
 	@Test
-	void ccCanReadButNotDecide_andAppearsInCcBox() throws Exception {
+	void 참조자는_읽기만_하고_참조문서함에_나온다() throws Exception {
 		Member me = user("cd");
 		Member boss = user("cb");
 		Member cc = user("cc");
@@ -403,7 +403,7 @@ class GroupwareFeatureTests {
 	}
 
 	@Test
-	void deputyDecidesInsteadOfApprover_butNotFinal_andNotOwnDocument() throws Exception {
+	void 대결자는_대신_결재하지만_전결과_본인_문서는_못_한다() throws Exception {
 		Member drafter = user("dd");
 		Member boss = user("db");
 		Member next = user("dn");
@@ -454,7 +454,7 @@ class GroupwareFeatureTests {
 	}
 
 	@Test
-	void delegationRejectsSelfAndOverlap() throws Exception {
+	void 대결_설정은_본인과_기간_겹침을_거부한다() throws Exception {
 		Member boss = user("do");
 		MockHttpSession s = login(boss);
 		String today = LocalDate.now().toString();
@@ -468,7 +468,7 @@ class GroupwareFeatureTests {
 	}
 
 	@Test
-	void finalApprovalCompletesDocumentAndSkipsLaterSteps() throws Exception {
+	void 전결하면_문서가_완결되고_뒤_단계는_건너뛴다() throws Exception {
 		Member drafter = user("ed");
 		Member first = user("e1");
 		Member second = user("e2");
@@ -519,7 +519,7 @@ class GroupwareFeatureTests {
 	}
 
 	@Test
-	void repeatRuleDates() {
+	void 반복규칙_날짜_계산() {
 		LocalDate jan31 = LocalDate.of(2031, 1, 31);
 		assertThat(RepeatRule.MONTHLY.dates(jan31, LocalDate.of(2031, 4, 30)))
 			.containsExactly(jan31, LocalDate.of(2031, 3, 31));
@@ -529,7 +529,7 @@ class GroupwareFeatureTests {
 	}
 
 	@Test
-	void repeatingRoom_conflictsAreReportedOrSkipped_andCancelFollowing() throws Exception {
+	void 회의실_반복예약은_겹치면_알리거나_건너뛰고_이후_예약을_취소할_수_있다() throws Exception {
 		Member me = user("rp");
 		MockHttpSession s = login(me);
 		Resource room = room("반복실");
@@ -564,7 +564,7 @@ class GroupwareFeatureTests {
 	}
 
 	@Test
-	void repeatSkipsHolidays_andResourceCannotRepeat() throws Exception {
+	void 반복예약은_공휴일을_건너뛰고_자원은_반복할_수_없다() throws Exception {
 		Member me = user("rh");
 		MockHttpSession s = login(me);
 		Resource room = room("휴일실");
@@ -587,7 +587,7 @@ class GroupwareFeatureTests {
 	}
 
 	@Test
-	void resourceSpansSeveralDays_conflictsAcrossDays_andRoomStaysSameDay() throws Exception {
+	void 자원은_여러_날에_걸쳐_예약되고_날을_넘어_겹침을_검사하며_회의실은_하루_안에서만_된다() throws Exception {
 		Member me = user("md");
 		MockHttpSession s = login(me);
 		Resource car = resourceRepository.save(new Resource(ResourceType.VEHICLE, "차" + me.getLoginId(), null, 5, null, 0));
@@ -641,7 +641,7 @@ class GroupwareFeatureTests {
 	}
 
 	@Test
-	void commentNotifiesPostAuthor_butNotForOwnComment() throws Exception {
+	void 댓글은_글쓴이에게_알리지만_자기_댓글은_알리지_않는다() throws Exception {
 		Member author = user("pa");
 		Member reader = user("pr");
 		MockHttpSession as = login(author);
@@ -660,7 +660,7 @@ class GroupwareFeatureTests {
 	}
 
 	@Test
-	void longMessagesAreCut() {
+	void 긴_알림_문구는_자른다() {
 		Member m = user("nt");
 		notificationService.send(m, "게시판", "가".repeat(400), "/");
 		assertThat(notificationService.recent(m.getLoginId()).getContent().get(0).message()).hasSize(300).endsWith("…");

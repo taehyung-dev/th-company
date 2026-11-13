@@ -97,14 +97,14 @@ class AttendanceTests {
 	}
 
 	@Test
-	void workDayStartsAt6am() {
+	void 근무일은_오전_6시에_시작한다() {
 		assertThat(AttendanceService.workDateOf(DAY.atTime(5, 59))).isEqualTo(DAY.minusDays(1));
 		assertThat(AttendanceService.workDateOf(DAY.atTime(6, 0))).isEqualTo(DAY);
 		assertThat(AttendanceService.workDateOf(DAY.atTime(23, 59))).isEqualTo(DAY);
 	}
 
 	@Test
-	void loginBefore6amDoesNotCheckIn_firstLoginAfter6amDoes_laterLoginsDoNotChangeIt() throws Exception {
+	void 오전_6시_전_로그인은_출근이_아니고_6시_이후_첫_로그인이_출근이며_이후_로그인은_바꾸지_않는다() throws Exception {
 		loginAt(DAY.atTime(5, 30));
 		assertThat(record(DAY)).isNull();
 		assertThat(record(DAY.minusDays(1))).isNull();
@@ -120,7 +120,7 @@ class AttendanceTests {
 	}
 
 	@Test
-	void checkOutRecordsTime_canBeRedone_andWorksAfterMidnightForPreviousDay() throws Exception {
+	void 퇴근은_시각을_기록하고_다시_할_수_있으며_자정이_지나면_전날_근무로_기록된다() throws Exception {
 		MockHttpSession session = loginAt(DAY.atTime(9, 0));
 
 		clock.set(DAY.atTime(18, 5));
@@ -138,7 +138,7 @@ class AttendanceTests {
 	}
 
 	@Test
-	void checkOutWithoutCheckInIsRejected() throws Exception {
+	void 출근_없이_퇴근하면_거부된다() throws Exception {
 		MockHttpSession session = loginAt(DAY.atTime(5, 0));
 		mvc.perform(get("/").session(session))
 			.andExpect(content().string(containsString("오전 6시 이후 첫 로그인 시 출근이 기록됩니다.")));
@@ -147,7 +147,7 @@ class AttendanceTests {
 	}
 
 	@Test
-	void myMonth_showsLateWorkingAndAbsentDays_andCheckOutReturnsToAttendance() throws Exception {
+	void 내_근태_월별_화면에_지각_근무_미출근이_보이고_퇴근하면_근태화면으로_돌아온다() throws Exception {
 		MockHttpSession session = loginAt(DAY.atTime(9, 30));
 		AttendanceMonth month = attendanceService.myMonth(loginId, YearMonth.from(DAY));
 		AttendanceDay today = month.days().get(DAY.getDayOfMonth() - 1);
@@ -177,7 +177,7 @@ class AttendanceTests {
 	}
 
 	@Test
-	void attendanceManagerCorrectsRecords_withReason_andOthersCannot() throws Exception {
+	void 근태관리자는_사유와_함께_정정하고_다른_사람은_못_한다() throws Exception {
 		String managerId = "attm" + UUID.randomUUID().toString().substring(0, 6);
 		Member manager = new Member(managerId, passwordEncoder.encode("pw"), "근태담당", Role.USER);
 		manager.grant(Permission.ATTENDANCE_MANAGER);

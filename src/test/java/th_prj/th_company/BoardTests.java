@@ -88,7 +88,7 @@ class BoardTests {
 	}
 
 	@Test
-	void userWritesPostWithAttachment_listsViewsAndDownloads() throws Exception {
+	void 첨부파일과_함께_글을_쓰고_목록_조회_내려받기를_한다() throws Exception {
 		MockHttpSession session = login(writer, "pw");
 		byte[] bytes = "첨부 내용".getBytes(StandardCharsets.UTF_8);
 		Long postId = write(session, free, "첫 글",
@@ -112,7 +112,7 @@ class BoardTests {
 	}
 
 	@Test
-	void onlyAuthorOrAdminCanEditOrDelete_andFilesAreRemoved() throws Exception {
+	void 작성자나_관리자만_수정_삭제하고_삭제하면_파일도_지운다() throws Exception {
 		Long postId = write(login(writer, "pw"), free, "남의 글",
 			new MockMultipartFile("uploads", "a.txt", "text/plain", "x".getBytes()));
 		Attachment file = attachmentRepository.findByPostIdOrderById(postId).get(0);
@@ -132,7 +132,7 @@ class BoardTests {
 	}
 
 	@Test
-	void authorCanEditAndRemoveAttachment() throws Exception {
+	void 작성자는_글을_고치고_첨부파일을_뺄_수_있다() throws Exception {
 		MockHttpSession session = login(writer, "pw");
 		Long postId = write(session, free, "수정 전",
 			new MockMultipartFile("uploads", "old.txt", "text/plain", "old".getBytes()));
@@ -152,7 +152,7 @@ class BoardTests {
 	}
 
 	@Test
-	void noticeBoardIsAdminOnly_andPinnedPostsShowOnHome() throws Exception {
+	void 공지게시판은_관리자만_쓰고_상단고정_글은_홈에_보인다() throws Exception {
 		MockHttpSession user = login(writer, "pw");
 		mvc.perform(get("/boards/{b}/posts/new", notice.getId()).session(user)).andExpect(status().isForbidden());
 		mvc.perform(multipart("/boards/{b}/posts", notice.getId()).param("title", "몰래").param("content", "x")
@@ -171,7 +171,7 @@ class BoardTests {
 	}
 
 	@Test
-	void commentsCanBeDeletedOnlyByAuthor() throws Exception {
+	void 댓글은_작성자만_지울_수_있다() throws Exception {
 		MockHttpSession writerSession = login(writer, "pw");
 		Long postId = write(writerSession, free, "댓글 테스트");
 
@@ -202,7 +202,7 @@ class BoardTests {
 	}
 
 	@Test
-	void searchAndPaging() throws Exception {
+	void 검색과_페이지_나누기() throws Exception {
 		MockHttpSession session = login(writer, "pw");
 		for (int i = 1; i <= 17; i++) {
 			write(session, free, "페이지글" + i);
@@ -219,7 +219,7 @@ class BoardTests {
 	}
 
 	@Test
-	void hiddenBoardIsNotFound_andAdminBoardRulesApply() throws Exception {
+	void 숨긴_게시판은_찾을_수_없고_관리자_게시판_규칙이_적용된다() throws Exception {
 		MockHttpSession admin = login("sysadmin", "a");
 		free.update(free.getName(), null, free.getParent(), 10, false, false);
 		boardRepository.save(free);

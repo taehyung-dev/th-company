@@ -65,14 +65,14 @@ class MenuTests {
 	}
 
 	@Test
-	void defaultOrder_includesAddressBook() throws Exception {
+	void 기본_메뉴순서에_주소록이_있다() throws Exception {
 		assertThat(menuService.ordered()).containsExactly(MainMenu.values());
 		String html = mvc.perform(get("/").session(login("sysadmin", "a"))).andReturn().getResponse().getContentAsString();
 		assertThat(menubar(html)).isEqualTo("홈 게시판 전자결재 일정 회의실예약 자원예약 근태관리 주소록");
 	}
 
 	@Test
-	void topbarIcons_orgChartOpensAsPopup_adminIconOnlyForAdmins() throws Exception {
+	void 상단_아이콘의_조직도는_팝업으로_열리고_관리자_아이콘은_관리자만_보인다() throws Exception {
 		String adminHtml = mvc.perform(get("/").session(login("sysadmin", "a"))).andReturn().getResponse().getContentAsString();
 		assertThat(adminHtml)
 			.contains("aria-label=\"조직도\"", "data-org-popup", "aria-label=\"관리자 페이지\"", "aria-label=\"로그아웃\"");
@@ -94,7 +94,7 @@ class MenuTests {
 	}
 
 	@Test
-	void adminReordersMenus_userSeesNewOrder_thenReset() throws Exception {
+	void 관리자가_메뉴순서를_바꾸면_사용자에게_반영되고_초기화된다() throws Exception {
 		MockHttpSession admin = login("sysadmin", "a");
 		mvc.perform(get("/admin/menus").session(admin))
 			.andExpect(status().isOk())
@@ -115,7 +115,7 @@ class MenuTests {
 	}
 
 	@Test
-	void rejectsIncompleteOrUnknownMenus_andNonAdmins() throws Exception {
+	void 빠지거나_없는_메뉴와_관리자가_아닌_요청은_거부한다() throws Exception {
 		MockHttpSession admin = login("sysadmin", "a");
 		mvc.perform(save(admin, "HOME", "BOARD"))
 			.andExpect(flash().attribute("error", containsString("올바르지 않습니다")));
@@ -148,7 +148,7 @@ class MenuTests {
 	}
 
 	@Test
-	void adminReordersAdminMenu_everyManagerSeesNewOrder_thenReset() throws Exception {
+	void 관리자메뉴_순서를_바꾸면_모든_관리자에게_반영되고_초기화된다() throws Exception {
 		MockHttpSession admin = login("sysadmin", "a");
 		String page = mvc.perform(get("/admin/menus/admin").session(admin))
 			.andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
@@ -184,7 +184,7 @@ class MenuTests {
 	}
 
 	@Test
-	void rejectsIncompleteAdminMenus() throws Exception {
+	void 빠진_관리자메뉴는_거부한다() throws Exception {
 		MockHttpSession admin = login("sysadmin", "a");
 		mvc.perform(saveAdmin(admin, "HR", "BOARD"))
 			.andExpect(flash().attribute("error", containsString("올바르지 않습니다")));

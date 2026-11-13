@@ -76,7 +76,7 @@ class AddressBookTests {
 	}
 
 	@Test
-	void companyDirectory_searchesActiveMembers_andDepartmentIncludesSubDepartments() throws Exception {
+	void 사내주소록은_재직자만_검색하고_부서를_고르면_하위부서까지_나온다() throws Exception {
 		assertThat(addressService.employees(suffix, null, 0).getContent()).extracting(Employee::name)
 			.containsExactlyInAnyOrder(me.getName(), colleague.getName());
 		// 본부를 고르면 하위 팀 인원까지, 팀을 고르면 팀 인원만
@@ -98,7 +98,7 @@ class AddressBookTests {
 	}
 
 	@Test
-	void personalContacts_crudFavoriteGroupAndSearch() throws Exception {
+	void 개인주소록_등록_수정_삭제_즐겨찾기_그룹_검색() throws Exception {
 		mvc.perform(post("/address/groups").session(session).with(csrf()).param("name", "거래처"))
 			.andExpect(flash().attribute("message", containsString("거래처")));
 		mvc.perform(post("/address/groups").session(session).with(csrf()).param("name", " 거래처 "))
@@ -151,7 +151,7 @@ class AddressBookTests {
 	}
 
 	@Test
-	void addressFields_saveForContactAndEmployee_andShowSearchButton() throws Exception {
+	void 주소를_연락처와_직원정보에_저장하고_주소검색_버튼을_보여준다() throws Exception {
 		// 개인 주소록: 검색으로 채운 주소 + 상세주소, 다시 열면 그대로
 		mvc.perform(get("/address/personal/new").session(session))
 			.andExpect(content().string(containsString("data-addr-search")));
@@ -195,7 +195,7 @@ class AddressBookTests {
 	}
 
 	@Test
-	void othersCannotSeeOrChangeMyContacts() throws Exception {
+	void 다른_사람은_내_연락처를_보거나_바꿀_수_없다() throws Exception {
 		mvc.perform(post("/address/personal").session(session).with(csrf()).param("name", "비밀연락처" + suffix));
 		Long id = addressService.contacts(me.getLoginId(), false, null, null, 0).getContent().get(0).id();
 
@@ -209,7 +209,7 @@ class AddressBookTests {
 	}
 
 	@Test
-	void addEmployeeFromDirectory_andExportCsv() throws Exception {
+	void 사내주소록에서_직원을_개인주소록에_추가하고_CSV로_내보낸다() throws Exception {
 		mvc.perform(post("/address/personal/add-employee").session(session).with(csrf())
 				.param("memberId", colleague.getId().toString()).param("back", "/address/company?q=" + suffix))
 			.andExpect(redirectedUrl("/address/company?q=" + suffix))

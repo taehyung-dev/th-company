@@ -46,7 +46,7 @@ class OrgChartTests {
 	}
 
 	@Test
-	void showsOnlyDirectMembersSortedByDutyThenGrade_andHidesDisabled() throws Exception {
+	void 부서_직속만_직책_직급순으로_보여주고_사용중지자는_숨긴다() throws Exception {
 		Department division = departmentRepository.save(new Department("조직도본부", null, 900));
 		Department teamA = departmentRepository.save(new Department("조직도A팀", division, 10));
 		Department closed = departmentRepository.save(new Department("폐지된팀", division, 20));
@@ -84,7 +84,7 @@ class OrgChartTests {
 	}
 
 	@Test
-	void opensOwnDepartmentForUser_andTopDepartmentForAdmin() throws Exception {
+	void 사용자는_내_부서가_관리자는_최상위_부서가_열린다() throws Exception {
 		Department top = departmentRepository.findAllByOrderBySortOrderAscNameAsc().stream()
 			.filter(d -> d.getParent() == null).findFirst()
 			.orElseGet(() -> departmentRepository.save(new Department("최상위", null, 0)));
@@ -122,7 +122,7 @@ class OrgChartTests {
 	}
 
 	@Test
-	void unknownDepartmentFallsBackToFirst() {
+	void 없는_부서를_요청하면_첫_부서를_보여준다() {
 		departmentRepository.save(new Department("기본선택부서", null, 0));
 		OrgChart chart = orgChartService.load(-1L);
 		assertThat(chart.selected()).isEqualTo(chart.departments().get(0));

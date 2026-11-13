@@ -86,7 +86,7 @@ class PermissionTests {
 	}
 
 	@Test
-	void grantToUsers_becomesAuthorityOnNextLogin_andCanBeRevoked() throws Exception {
+	void 사용자에게_준_권한은_다음_로그인부터_적용되고_회수할_수_있다() throws Exception {
 		MockHttpSession admin = login("sysadmin", "a");
 		mvc.perform(get("/admin/permissions").session(admin))
 			.andExpect(status().isOk())
@@ -114,7 +114,7 @@ class PermissionTests {
 	}
 
 	@Test
-	void grantToDepartment_withoutSub_coversOnlyThatDepartment_thenToggleSub() throws Exception {
+	void 하위부서_제외로_부서에_준_권한은_그_부서만_해당하고_하위포함으로_바꿀_수_있다() throws Exception {
 		MockHttpSession admin = login("sysadmin", "a");
 		mvc.perform(post("/admin/permissions/schedule-manager/grant").session(admin).with(csrf())
 				.param("deptIds", division.getId().toString()))
@@ -142,7 +142,7 @@ class PermissionTests {
 	}
 
 	@Test
-	void grantDepartmentWithSubAndUsersTogether_andNewMemberOfDepartmentGetsIt() throws Exception {
+	void 하위포함_부서와_사용자에게_함께_주면_부서에_새로_온_사람도_받는다() throws Exception {
 		MockHttpSession admin = login("sysadmin", "a");
 		Member outsider = member("out" + suffix, null);
 		mvc.perform(post("/admin/permissions/attendance-manager/grant").session(admin).with(csrf())
@@ -169,7 +169,7 @@ class PermissionTests {
 	}
 
 	@Test
-	void onlyAdminCanManage_andBadInputsAreHandled() throws Exception {
+	void 관리자만_관리하고_잘못된_입력을_처리한다() throws Exception {
 		MockHttpSession user = login(staffLoginId, "pw");
 		mvc.perform(get("/admin/permissions").session(user)).andExpect(status().isForbidden());
 		mvc.perform(post("/admin/permissions/board-manager/grant").session(user).with(csrf())

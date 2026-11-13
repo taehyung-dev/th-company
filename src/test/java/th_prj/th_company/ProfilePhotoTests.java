@@ -76,7 +76,7 @@ class ProfilePhotoTests {
 	}
 
 	@Test
-	void adminUploadsPhoto_orgChartShowsTopPersonDetailWithPhoto_thenRemoves() throws Exception {
+	void 관리자가_사진을_올리면_조직도_상세에_보이고_지울_수_있다() throws Exception {
 		String suffix = UUID.randomUUID().toString().substring(0, 6);
 		Department team = departmentRepository.save(new Department("사진팀" + suffix, null, 990));
 		HrCode leaderDuty = hrCodeRepository.save(new HrCode(HrCodeType.DUTY, "사진팀장" + suffix, 1));
@@ -141,7 +141,7 @@ class ProfilePhotoTests {
 	}
 
 	@Test
-	void disabledMembersPhotoHiddenFromUsers() throws Exception {
+	void 사용중지자의_사진은_사용자에게_숨긴다() throws Exception {
 		String suffix = UUID.randomUUID().toString().substring(0, 6);
 		Department team = departmentRepository.save(new Department("퇴사팀" + suffix, null, 991));
 		Member left = new Member("photo_left" + suffix, passwordEncoder.encode("pw"), "퇴사자", Role.USER);
